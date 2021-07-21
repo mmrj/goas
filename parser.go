@@ -1570,12 +1570,6 @@ func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchem
 			}
 			parseTagValue := strings.Split(v, "=")
 			if len(parseTagValue) > 0 {
-				if parseTagValue[0] == "required" {
-					structSchema.Required = append(structSchema.Required, parseTagValue[1])
-				}
-				if parseTagValue[0] == "description" {
-					fieldSchema.Description = parseTagValue[1]
-				}
 				if parseTagValue[0] == "enum" {
 					fieldSchema.Enum = strings.Split(parseTagValue[1], " ")
 				}
@@ -1643,6 +1637,10 @@ func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchem
 		}
 		if _, ok := astFieldTag.Lookup("required"); ok || isRequired {
 			structSchema.Required = append(structSchema.Required, name)
+		}
+
+		if desc := astFieldTag.Get("description"); desc != "" {
+			fieldSchema.Description = desc
 		}
 	}
 
