@@ -1609,6 +1609,8 @@ func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchem
 			tagText = tag
 		}
 		tagValues := strings.Split(tagText, ",")
+		isRequired := false
+
 		for _, v := range tagValues {
 			if v == "-" {
 				structSchema.DisabledFieldNames[name] = struct{}{}
@@ -1620,6 +1622,9 @@ func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchem
 				if parseTagValue[0] == "enum" {
 					fieldSchema.Enum = strings.Split(parseTagValue[1], " ")
 				}
+				if parseTagValue[0] == "required" {
+					isRequired = true
+				}
 			}
 		}
 
@@ -1627,7 +1632,6 @@ func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchem
 			tagText = tag
 		}
 		tagValues = strings.Split(tagText, ",")
-		isRequired := false
 		for _, v := range tagValues {
 			if v == "-" {
 				structSchema.DisabledFieldNames[name] = struct{}{}

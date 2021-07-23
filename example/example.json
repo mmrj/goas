@@ -384,7 +384,10 @@
             "type": "boolean",
             "example": true
           }
-        }
+        },
+        "required": [
+          "myEnum"
+        ]
       },
       "FooBody": {
         "type": "object",
