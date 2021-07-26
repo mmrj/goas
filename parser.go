@@ -1483,6 +1483,7 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 
 	for _, astField := range astFields {
 		fieldSchema := &SchemaObject{}
+		isPtr := isTypePtr(astField.Type)
 		typeAsString := p.getTypeAsString(astField.Type)
 		typeAsString = strings.TrimLeft(typeAsString, "*")
 		isSliceOrMap := strings.HasPrefix(typeAsString, "[]") || strings.HasPrefix(typeAsString, "map[]")
@@ -1551,6 +1552,7 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 			}
 		} else {
 			name := astField.Names[0].Name
+
 			fieldSchema.FieldName = name
 			_, disabled := structSchema.DisabledFieldNames[name]
 			if disabled {
@@ -1561,9 +1563,10 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 			if skip {
 				continue
 			}
-
 			name = newName
-
+			if !isPtr {
+				structSchema.Required = append(structSchema.Required, name)
+			}
 			structSchema.Properties.Set(name, fieldSchema)
 		}
 	}
@@ -1635,7 +1638,7 @@ func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchem
 				return "", true
 			} else if v == "required" {
 				isRequired = true
-			} else if v != "" && v != "required" && v != "omitempty" {
+			} else if v != "" && v != "omitempty" {
 				name = v
 			}
 		}
@@ -1760,4 +1763,12 @@ func sortedFileKeys(m map[string]*ast.File) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+func isTypePtr(fieldType interface{}) bool {
+	_, ok := fieldType.(*ast.StarExpr)
+	if ok {
+		return true
+	}
+	return false
 }

@@ -265,7 +265,10 @@
           "name": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "name"
+        ]
       },
       "FooMergePatch": {
         "type": "object",
@@ -274,7 +277,10 @@
             "type": "integer",
             "format": "int64"
           }
-        }
+        },
+        "required": [
+          "count"
+        ]
       },
       "FooPatchOperation": {
         "type": "object",
@@ -288,7 +294,12 @@
           "value": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "op",
+          "path",
+          "value"
+        ]
       },
       "FooPatchOperationSet": {
         "type": "object",
@@ -307,10 +318,18 @@
                 "value": {
                   "type": "string"
                 }
-              }
+              },
+              "required": [
+                "op",
+                "path",
+                "value"
+              ]
             }
           }
-        }
+        },
+        "required": [
+          "operations"
+        ]
       },
       "FooResponse": {
         "type": "object",
@@ -349,7 +368,11 @@
                 "b": {
                   "type": "string"
                 }
-              }
+              },
+              "required": [
+                "a",
+                "b"
+              ]
             }
           },
           "environments": {
@@ -360,7 +383,10 @@
                 "name": {
                   "type": "string"
                 }
-              }
+              },
+              "required": [
+                "name"
+              ]
             }
           },
           "freeForm": {},
@@ -384,7 +410,24 @@
             "type": "boolean",
             "example": true
           }
-        }
+        },
+        "required": [
+          "bsonId",
+          "id",
+          "startDate",
+          "endDate",
+          "count",
+          "msg",
+          "foo",
+          "environments",
+          "freeForm",
+          "jsonMap",
+          "doubleAlias",
+          "interfaceBlah",
+          "instruction",
+          "randomBool",
+          "myEnum"
+        ]
       },
       "FooBody": {
         "type": "object",
@@ -395,7 +438,11 @@
           "Example": {
             "$ref": "#/components/schemas/DoubleAlias"
           }
-        }
+        },
+        "required": [
+          "name",
+          "Example"
+        ]
       },
       "InnerFoo": {
         "type": "object",
@@ -406,7 +453,11 @@
           "b": {
             "type": "string"
           }
-        }
+        },
+        "required": [
+          "a",
+          "b"
+        ]
       },
       "Instruction": {
         "type": "object",
