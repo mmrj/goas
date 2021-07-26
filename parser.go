@@ -1552,7 +1552,6 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 			}
 		} else {
 			name := astField.Names[0].Name
-
 			fieldSchema.FieldName = name
 			_, disabled := structSchema.DisabledFieldNames[name]
 			if disabled {
