@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"go/ast"
 	goparser "go/parser"
+	"go/printer"
 	"go/token"
 	"io/ioutil"
 	"log"
@@ -1357,6 +1359,10 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 
 	if isGoTypeOASType(p.getTypeAsString(typeSpec.Type)) && schemaObject.Ref == "" {
 		typeAsString := p.getTypeAsString(typeSpec.Type)
+		isPtr := isTypePtr(typeSpec.Type)
+		if !isPtr {
+			schemaObject.Required = append(schemaObject.Required, typeAsString)
+		}
 		localGoType := goTypesOASTypes[typeAsString]
 		schemaObject.Type = &localGoType
 		checkFormatInt64(typeAsString, &schemaObject)
@@ -1401,6 +1407,7 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 		propertySchema := &SchemaObject{}
 		schemaObject.AdditionalProperties = propertySchema
 		typeAsString := p.getTypeAsString(astMapType.Value)
+		isPtr := isTypePtr(astMapType.Value)
 		typeAsString = strings.TrimLeft(typeAsString, "*")
 		if !isBasicGoType(typeAsString) {
 			keySchema, err := p.getSchemaObjectCached(pkgPath, pkgName, typeAsString)
@@ -1409,11 +1416,18 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 			} else {
 				if keySchema.ID != "" {
 					propertySchema.Ref = addSchemaRefLinkPrefix(keySchema.ID)
+					if !isPtr {
+						propertySchema.Required = append(propertySchema.Required, keySchema.ID)
+					}
 				} else {
 					*propertySchema = *keySchema
 				}
+
 			}
 		} else if isGoTypeOASType(typeAsString) {
+			if !isPtr {
+				propertySchema.Required = append(propertySchema.Required, typeAsString)
+			}
 			localGoType := goTypesOASTypes[typeAsString]
 			propertySchema.Type = &localGoType
 		}
@@ -1483,7 +1497,28 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 
 	for _, astField := range astFields {
 		fieldSchema := &SchemaObject{}
-		isPtr := isTypePtr(astField.Type)
+
+		// normal ast parsing of the struct field is not returning that the type is a pointer. Relying on text parsing to determine.
+		isRequired := true
+		fset := token.NewFileSet()
+		var typeNameBuf bytes.Buffer
+		err := printer.Fprint(&typeNameBuf, fset, astField.Type)
+		if err != nil {
+			log.Fatalf("failed printing %s", err)
+		}
+
+		// Rely on omitempty property of tag.
+		if astField.Tag != nil {
+			var tagBuf bytes.Buffer
+			err = printer.Fprint(&tagBuf, fset, astField.Tag)
+			if err != nil {
+				log.Fatalf("failed printing %s", err)
+			}
+			if strings.Contains(tagBuf.String(), "omitempty") {
+				isRequired = false
+			}
+		}
+
 		typeAsString := p.getTypeAsString(astField.Type)
 		typeAsString = strings.TrimLeft(typeAsString, "*")
 		isSliceOrMap := strings.HasPrefix(typeAsString, "[]") || strings.HasPrefix(typeAsString, "map[]")
@@ -1527,6 +1562,9 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 					}
 					propertySchema, _ := fieldSchema.Properties.Get(propertyName)
 					structSchema.Properties.Set(propertyName, propertySchema)
+					if isRequired {
+						structSchema.Required = append(structSchema.Required, propertyName)
+					}
 				}
 			} else if len(fieldSchema.Ref) != 0 && len(fieldSchema.ID) != 0 {
 				refSchema, ok := p.KnownIDSchema[fieldSchema.ID]
@@ -1535,6 +1573,8 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 						p.debug("nil refSchema.Properties")
 						continue
 					}
+					requiredProps := []string{}
+
 					for _, propertyName := range refSchema.Properties.Keys() {
 						refPropertySchema, _ := refSchema.Properties.Get(propertyName)
 						_, disabled := structSchema.DisabledFieldNames[refPropertySchema.(*SchemaObject).FieldName]
@@ -1547,7 +1587,14 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 						}
 
 						structSchema.Properties.Set(propertyName, refPropertySchema)
+						if isRequired {
+							requiredProps = append(requiredProps, propertyName)
+						}
 					}
+					for _, prop := range requiredProps {
+						structSchema.Required = append(structSchema.Required, prop)
+					}
+
 				}
 			}
 		} else {
@@ -1563,7 +1610,7 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 				continue
 			}
 			name = newName
-			if !isPtr {
+			if isRequired {
 				structSchema.Required = append(structSchema.Required, name)
 			}
 			structSchema.Properties.Set(name, fieldSchema)
@@ -1637,7 +1684,7 @@ func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchem
 				return "", true
 			} else if v == "required" {
 				isRequired = true
-			} else if v != "" && v != "omitempty" {
+			} else if v != "" && v != "required" && v != "omitempty" {
 				name = v
 			}
 		}

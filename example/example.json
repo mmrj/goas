@@ -425,7 +425,6 @@
           "doubleAlias",
           "interfaceBlah",
           "instruction",
-          "randomBool",
           "myEnum"
         ]
       },
@@ -470,7 +469,10 @@
       },
       "UnixMillis": {
         "type": "integer",
-        "format": "int64"
+        "format": "int64",
+        "required": [
+          "int64"
+        ]
       }
     },
     "securitySchemes": {
