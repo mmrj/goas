@@ -469,10 +469,7 @@
       },
       "UnixMillis": {
         "type": "integer",
-        "format": "int64",
-        "required": [
-          "int64"
-        ]
+        "format": "int64"
       }
     },
     "securitySchemes": {

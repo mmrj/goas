@@ -1359,10 +1359,6 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 
 	if isGoTypeOASType(p.getTypeAsString(typeSpec.Type)) && schemaObject.Ref == "" {
 		typeAsString := p.getTypeAsString(typeSpec.Type)
-		isPtr := isTypePtr(typeSpec.Type)
-		if !isPtr {
-			schemaObject.Required = append(schemaObject.Required, typeAsString)
-		}
 		localGoType := goTypesOASTypes[typeAsString]
 		schemaObject.Type = &localGoType
 		checkFormatInt64(typeAsString, &schemaObject)
@@ -1501,16 +1497,11 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 		// normal ast parsing of the struct field is not returning that the type is a pointer. Relying on text parsing to determine.
 		isRequired := true
 		fset := token.NewFileSet()
-		var typeNameBuf bytes.Buffer
-		err := printer.Fprint(&typeNameBuf, fset, astField.Type)
-		if err != nil {
-			log.Fatalf("failed printing %s", err)
-		}
 
 		// Rely on omitempty property of tag.
 		if astField.Tag != nil {
 			var tagBuf bytes.Buffer
-			err = printer.Fprint(&tagBuf, fset, astField.Tag)
+			err := printer.Fprint(&tagBuf, fset, astField.Tag)
 			if err != nil {
 				log.Fatalf("failed printing %s", err)
 			}
