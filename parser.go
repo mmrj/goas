@@ -1491,14 +1491,15 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 		if isSliceOrMap || isInterface || typeAsString == "time.Time" {
 			splitType := strings.Split(typeAsString, "]")
 			if len(splitType) > 1 {
-				if !isBasicGoType(splitType[1]) {
-					if _, ok := p.KnownIDSchema[splitType[1]]; ok {
-						if strings.Contains(splitType[0], "map") {
+				valueType := splitType[1]
+				if !isBasicGoType(valueType) {
+					if _, ok := p.KnownIDSchema[valueType]; ok {
+						if strings.HasPrefix(splitType[0], "map") {
 							fieldSchema.Type = &objectType
 						} else {
 							fieldSchema.Type = &arrayType
 						}
-						fieldSchema.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(p.getTypeAsString(splitType[1]))}
+						fieldSchema.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(p.getTypeAsString(valueType))}
 					} else {
 						fieldSchemaSchemeaObjectID, err := p.registerType(pkgPath, pkgName, typeAsString)
 						fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
