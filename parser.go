@@ -1507,7 +1507,7 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 							return
 						}
 						if fieldSchemaSchemeaObjectID != "" {
-							fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
+							structSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
 						}
 					}
 				} else {
@@ -1533,16 +1533,22 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 				p.debug("parseSchemaPropertiesFromStructFields err:", err)
 			} else {
 				fieldSchema.ID = fieldSchemaSchemeaObjectID
-				_, ok := p.KnownIDSchema[fieldSchemaSchemeaObjectID]
+				foundSchema, ok := p.KnownIDSchema[fieldSchemaSchemeaObjectID]
 				if ok {
-					fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
+					if astField.Tag != nil { // inlined structs do not support tagging.
+						fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
+					} else {
+						structSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
+						for _, required := range foundSchema.Required {
+							structSchema.Required = append(structSchema.Required, required)
+						}
+					}
 				} else {
 					fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
 					if err != nil {
 						p.debug(err)
 						return
 					}
-					fmt.Println(fieldSchemaSchemeaObjectID)
 					fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
 				}
 			}
