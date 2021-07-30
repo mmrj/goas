@@ -1660,8 +1660,6 @@ func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchem
 				structSchema.DisabledFieldNames[name] = struct{}{}
 				fieldSchema.Deprecated = true
 				return "", true
-			} else if v == "required" {
-				isRequired = true
 			} else if v != "" && v != "required" && v != "omitempty" {
 				name = v
 			}

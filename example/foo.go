@@ -35,8 +35,9 @@ type FooResponse struct {
 }
 
 type FooBody struct {
-	Name    string      `json:"name"`
-	Example DoubleAlias `'json:"doubleAlias"`
+	Name     string      `json:"name"`
+	Example  DoubleAlias `'json:"doubleAlias"`
+	Required bool        `json:"required"`
 }
 type Environment struct {
 	Name string `json:"name"`
