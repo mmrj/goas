@@ -1490,19 +1490,16 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 		isInterface := strings.HasPrefix(typeAsString, "interface{}")
 		if isSliceOrMap || isInterface || typeAsString == "time.Time" {
 			splitType := strings.Split(typeAsString, "]")
-			fmt.Println(fmt.Sprintf("First: %s", splitType))
-
 			if len(splitType) > 1 {
-				fmt.Println(splitType)
 				if !isBasicGoType(splitType[1]) {
-					fmt.Println("Length longer")
-					fmt.Println(splitType[1])
 					if _, ok := p.KnownIDSchema[splitType[1]]; ok {
-						fmt.Println(fmt.Sprintf("Known: %s", p.getTypeAsString(splitType[1])))
-						fieldSchema.Type = &arrayType
-						fieldSchema.Ref = addSchemaRefLinkPrefix(p.getTypeAsString(splitType[1]))
+						if strings.Contains(splitType[0], "map") {
+							fieldSchema.Type = &objectType
+						} else {
+							fieldSchema.Type = &arrayType
+						}
+						fieldSchema.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(p.getTypeAsString(splitType[1]))}
 					} else {
-						fmt.Println(fmt.Sprintf("In else: %s", splitType))
 						fieldSchemaSchemeaObjectID, err := p.registerType(pkgPath, pkgName, typeAsString)
 						fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
 						if err != nil {
@@ -1514,7 +1511,6 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 						}
 					}
 				} else {
-					fmt.Println(fmt.Sprintf("In other else: %s", splitType))
 					var err error
 					fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
 					if err != nil {
@@ -1523,7 +1519,6 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 					}
 				}
 			} else {
-				fmt.Println(fmt.Sprintf("here: %s", typeAsString))
 				var err error
 				fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
 				if err != nil {
