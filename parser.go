@@ -1368,9 +1368,6 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 			return nil, err
 		}
 		schemaObject.Ref = addSchemaRefLinkPrefix(newSchema.ID)
-		// schemaObject.Type = newSchema.Type
-		// schemaObject.Properties = newSchema.Properties
-		// schemaObject.AdditionalProperties = newSchema.AdditionalProperties
 	} else if astStructType, ok := typeSpec.Type.(*ast.StructType); ok {
 		schemaObject.Type = &objectType
 		if astStructType.Fields != nil {
@@ -1527,7 +1524,6 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 					return
 				}
 			}
-
 		} else if !isBasicGoType(typeAsString) {
 			fieldSchemaSchemeaObjectID, err := p.registerType(pkgPath, pkgName, typeAsString)
 			if err != nil {
