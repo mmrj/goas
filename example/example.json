@@ -256,8 +256,7 @@
         "type": "string"
       },
       "DoubleAlias": {
-        "type": "object",
-        "additionalProperties": {}
+        "$ref": "#/components/schemas/JsonMap"
       },
       "Environment": {
         "type": "object",
@@ -294,21 +293,10 @@
         "type": "object",
         "properties": {
           "operations": {
-            "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "op": {
-                  "type": "string"
-                },
-                "path": {
-                  "type": "string"
-                },
-                "value": {
-                  "type": "string"
-                }
-              }
-            }
+              "$ref": "#/components/schemas/FooPatchOperation"
+            },
+            "type": "array"
           }
         }
       },
@@ -339,28 +327,15 @@
             "type": "string"
           },
           "foo": {
-            "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "a": {
-                  "type": "string"
-                },
-                "b": {
-                  "type": "string"
-                }
-              }
-            }
+              "$ref": "#/components/schemas/InnerFoo"
+            },
+            "type": "array"
           },
           "environments": {
             "type": "object",
             "additionalProperties": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                }
-              }
+              "$ref": "#/components/schemas/Environment"
             }
           },
           "freeForm": {},
