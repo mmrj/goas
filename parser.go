@@ -1538,9 +1538,11 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 					if astField.Tag != nil { // inlined structs do not support tagging.
 						fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
 					} else {
-						structSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
-						for _, required := range foundSchema.Required {
-							structSchema.Required = append(structSchema.Required, required)
+						if foundSchema.Properties != nil {
+							structSchema.Properties = foundSchema.Properties
+							for _, required := range foundSchema.Required {
+								structSchema.Required = append(structSchema.Required, required)
+							}
 						}
 					}
 				} else {
