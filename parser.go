@@ -879,12 +879,12 @@ func (p *parser) parseDescription(operation *OperationObject, description string
 }
 
 func (p *parser) parseParamComment(pkgPath, pkgName string, operation *OperationObject, comment string) error {
-	// {name}  {in}  {goType}  {required}  {description}
-	// user    body  User      true        "Info of a user."
+	// {name}  {in}  {goType}  {required}  {description}  		{example (optional)}
+	// user    body  User      true        "Info of a user."	"{\"name\":\"Bilbo\"}"
 	// f       file  ignored   true        "Upload a file."
-	re := regexp.MustCompile(`([-\w]+)[\s]+([\w]+)[\s]+([\w./\[\]\\(\\),]+)[\s]+([\w]+)[\s]+"([^"]+)"`)
+	re := regexp.MustCompile(`([-\w]+)[\s]+([\w]+)[\s]+([\w./\[\]\\(\\),]+)[\s]+([\w]+)[\s]+"([^"]+)"(?:[\s]+"((?:[^"\\]|\\")*)")?`)
 	matches := re.FindStringSubmatch(comment)
-	if len(matches) != 6 {
+	if len(matches) < 6 {
 		return fmt.Errorf("parseParamComment can not parse param comment \"%s\"", comment)
 	}
 	name := matches[1]
@@ -985,8 +985,25 @@ func (p *parser) parseParamComment(pkgPath, pkgName string, operation *Operation
 	operation.RequestBody.Content[ContentTypeJson] = &MediaTypeObject{
 		Schema: *s,
 	}
+	// parse example
+	if len(matches) > 6 && matches[6] != "" {
+		exampleRequestBody, err := parseRequestBodyExample(matches[6])
+		if err != nil {
+			return err
+		}
+		operation.RequestBody.Content[ContentTypeJson].Example = exampleRequestBody
+	}
 
 	return nil
+}
+
+func parseRequestBodyExample(example string) (interface{}, error) {
+	exampleRequestBody := map[string]interface{}{}
+	err := json.Unmarshal([]byte(strings.Replace(example, "\\\"", "\"", -1)), &exampleRequestBody)
+	if err != nil {
+		return nil, err
+	}
+	return exampleRequestBody, nil
 }
 
 func (p *parser) parseBodyType(pkgPath, pkgName, typeName string) (*SchemaObject, error) {
