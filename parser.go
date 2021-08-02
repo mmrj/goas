@@ -1493,10 +1493,11 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 					if _, ok := p.KnownIDSchema[valueType]; ok {
 						if strings.HasPrefix(splitType[0], "map") {
 							fieldSchema.Type = &objectType
+							fieldSchema.AdditionalProperties = &SchemaObject{Ref: addSchemaRefLinkPrefix(p.getTypeAsString(valueType))}
 						} else {
 							fieldSchema.Type = &arrayType
+							fieldSchema.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(p.getTypeAsString(valueType))}
 						}
-						fieldSchema.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(p.getTypeAsString(valueType))}
 					} else {
 						fieldSchemaSchemeaObjectID, err := p.registerType(pkgPath, pkgName, typeAsString)
 						fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
