@@ -299,6 +299,14 @@ func fetchRef(description string) (string, error) {
 		return description, nil
 	}
 	url := description[5:]
+	if strings.HasPrefix(url, "file://") {
+		dat, err := ioutil.ReadFile(url[7:])
+		if err != nil {
+			return "", err
+		}
+		return string(dat), nil
+	}
+	// else assume http and fetch
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", err

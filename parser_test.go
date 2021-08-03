@@ -266,6 +266,15 @@ func Test_explodeRefs(t *testing.T) {
 	})
 }
 
+func Test_fetchRef(t *testing.T) {
+	t.Run("fetches local file ref", func(t *testing.T) {
+		desc, err := fetchRef("$ref:file://example/example.md")
+		require.NoError(t, err)
+
+		require.Equal(t, "Example description", desc)
+	})
+}
+
 func Test_descriptions(t *testing.T) {
 	t.Run("Description unchanged when not a ref", func(t *testing.T) {
 		p, err := newParser("example/", "example/main.go", "", false)
