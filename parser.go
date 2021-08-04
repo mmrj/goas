@@ -1006,7 +1006,7 @@ func (p *parser) parseParamComment(pkgPath, pkgName string, operation *Operation
 }
 
 func parseRequestBodyExample(example string) (interface{}, error) {
-	exampleRequestBody := map[string]interface{}{}
+	var exampleRequestBody interface{}
 	err := json.Unmarshal([]byte(strings.Replace(example, "\\\"", "\"", -1)), &exampleRequestBody)
 	if err != nil {
 		return nil, err
