@@ -299,6 +299,14 @@ func fetchRef(description string) (string, error) {
 		return description, nil
 	}
 	url := description[5:]
+	if strings.HasPrefix(url, "file://") {
+		dat, err := ioutil.ReadFile(url[7:])
+		if err != nil {
+			return "", err
+		}
+		return string(dat), nil
+	}
+	// else assume http and fetch
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", err
@@ -839,19 +847,20 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 			continue
 		}
 		attribute := strings.Fields(comment)[0]
+		value := strings.TrimSpace(comment[len(attribute):])
 		switch strings.ToLower(attribute) {
 		case "@title":
-			operation.Summary = strings.TrimSpace(comment[len(attribute):])
+			operation.Summary = value
 		case "@description":
-			operation.Description = strings.Join([]string{operation.Description, strings.TrimSpace(comment[len(attribute):])}, " ")
+			err = p.parseDescription(operation, value)
 		case "@operationid":
-			operation.OperationID = strings.TrimSpace(comment[len(attribute):])
+			operation.OperationID = value
 		case "@param":
-			err = p.parseParamComment(pkgPath, pkgName, operation, strings.TrimSpace(comment[len(attribute):]))
+			err = p.parseParamComment(pkgPath, pkgName, operation, value)
 		case "@success", "@failure":
-			err = p.parseResponseComment(pkgPath, pkgName, operation, strings.TrimSpace(comment[len(attribute):]))
+			err = p.parseResponseComment(pkgPath, pkgName, operation, value)
 		case "@resource", "@tag":
-			resource := strings.TrimSpace(comment[len(attribute):])
+			resource := value
 			if resource == "" {
 				resource = "others"
 			}
@@ -868,13 +877,22 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 	return nil
 }
 
+func (p *parser) parseDescription(operation *OperationObject, description string) error {
+	desc, err := fetchRef(description)
+	if err != nil {
+		return err
+	}
+	operation.Description = strings.Join([]string{operation.Description, desc}, " ")
+	return nil
+}
+
 func (p *parser) parseParamComment(pkgPath, pkgName string, operation *OperationObject, comment string) error {
-	// {name}  {in}  {goType}  {required}  {description}
-	// user    body  User      true        "Info of a user."
+	// {name}  {in}  {goType}  {required}  {description}  		{example (optional)}
+	// user    body  User      true        "Info of a user."	"{\"name\":\"Bilbo\"}"
 	// f       file  ignored   true        "Upload a file."
-	re := regexp.MustCompile(`([-\w]+)[\s]+([\w]+)[\s]+([\w./\[\]\\(\\),]+)[\s]+([\w]+)[\s]+"([^"]+)"`)
+	re := regexp.MustCompile(`([-\w]+)[\s]+([\w]+)[\s]+([\w./\[\]\\(\\),]+)[\s]+([\w]+)[\s]+"([^"]+)"(?:[\s]+"((?:[^"\\]|\\")*)")?`)
 	matches := re.FindStringSubmatch(comment)
-	if len(matches) != 6 {
+	if len(matches) < 6 {
 		return fmt.Errorf("parseParamComment can not parse param comment \"%s\"", comment)
 	}
 	name := matches[1]
@@ -975,8 +993,25 @@ func (p *parser) parseParamComment(pkgPath, pkgName string, operation *Operation
 	operation.RequestBody.Content[ContentTypeJson] = &MediaTypeObject{
 		Schema: *s,
 	}
+	// parse example
+	if len(matches) > 6 && matches[6] != "" {
+		exampleRequestBody, err := parseRequestBodyExample(matches[6])
+		if err != nil {
+			return err
+		}
+		operation.RequestBody.Content[ContentTypeJson].Example = exampleRequestBody
+	}
 
 	return nil
+}
+
+func parseRequestBodyExample(example string) (interface{}, error) {
+	exampleRequestBody := map[string]interface{}{}
+	err := json.Unmarshal([]byte(strings.Replace(example, "\\\"", "\"", -1)), &exampleRequestBody)
+	if err != nil {
+		return nil, err
+	}
+	return exampleRequestBody, nil
 }
 
 func (p *parser) parseBodyType(pkgPath, pkgName, typeName string) (*SchemaObject, error) {
@@ -1674,8 +1709,6 @@ func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchem
 				structSchema.DisabledFieldNames[name] = struct{}{}
 				fieldSchema.Deprecated = true
 				return "", true
-			} else if v == "required" {
-				isRequired = true
 			} else if v != "" && v != "required" && v != "omitempty" {
 				name = v
 			}

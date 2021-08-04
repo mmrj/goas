@@ -265,3 +265,61 @@ func Test_explodeRefs(t *testing.T) {
 		require.Equal(t, "Baz", p.OpenAPI.Tags[1].Description.Value)
 	})
 }
+
+func Test_fetchRef(t *testing.T) {
+	t.Run("fetches local file ref", func(t *testing.T) {
+		desc, err := fetchRef("$ref:file://example/example.md")
+		require.NoError(t, err)
+
+		require.Equal(t, "Example description", desc)
+	})
+}
+
+func Test_descriptions(t *testing.T) {
+	t.Run("Description unchanged when not a ref", func(t *testing.T) {
+		p, err := newParser("example/", "example/main.go", "", false)
+		require.NoError(t, err)
+
+		operation := &OperationObject{
+			Responses: map[string]*ResponseObject{},
+		}
+
+		err = p.parseDescription(operation, "testing")
+		require.NoError(t, err)
+
+		require.Equal(t, " testing", operation.Description)
+	})
+
+	t.Run("Description inline when a ref", func(t *testing.T) {
+		httpmock.Activate()
+		defer httpmock.DeactivateAndReset()
+		httpmock.RegisterResponder("GET", "https://example.com",
+			httpmock.NewStringResponder(200, "The quick brown fox jumped over the lazy dog"))
+
+		p, err := newParser("example/", "example/main.go", "", false)
+		require.NoError(t, err)
+
+		operation := &OperationObject{
+			Responses: map[string]*ResponseObject{},
+		}
+
+		err = p.parseDescription(operation, "$ref:https://example.com")
+		require.NoError(t, err)
+
+		require.Equal(t, " The quick brown fox jumped over the lazy dog", operation.Description)
+	})
+}
+
+func Test_parseRequestBodyExample(t *testing.T) {
+	t.Run("Parses example request body", func(t *testing.T) {
+		exampleRequestBody, err := parseRequestBodyExample("{\\\"name\\\":\\\"Bilbo\\\"}")
+		require.NoError(t, err)
+
+		require.Equal(t, map[string]interface{}(map[string]interface{}{"name": "Bilbo"}), exampleRequestBody)
+	})
+
+	t.Run("Errors if example is invalid", func(t *testing.T) {
+		_, err := parseRequestBodyExample("{name:\\\"Smaug\\\"}")
+		require.Error(t, err)
+	})
+}

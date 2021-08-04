@@ -369,6 +369,9 @@
           },
           "Example": {
             "$ref": "#/components/schemas/DoubleAlias"
+          },
+          "Required": {
+            "type": "boolean"
           }
         }
       },
