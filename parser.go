@@ -1568,8 +1568,8 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 				fieldSchema.ID = fieldSchemaSchemeaObjectID
 				foundSchema, ok := p.KnownIDSchema[fieldSchemaSchemeaObjectID]
 				if ok {
-					if astField.Tag != nil && foundSchema.Format != "" && !isBasicGoType(foundSchema.Format) && foundSchema.Items == nil { // inlined structs do not support tagging.
-						structSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
+					if astField.Tag != nil && !isBasicGoType(foundSchema.Format) && foundSchema.Properties == nil && !reflect.DeepEqual(foundSchema, SchemaObject{}) { // inlined structs do not support tagging.
+						fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
 					} else {
 						if foundSchema.Properties != nil {
 							if len(foundSchema.Required) > 0 {
@@ -1600,6 +1600,8 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 					}
 					fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
 				}
+
+				fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
 			}
 		} else if isGoTypeOASType(typeAsString) {
 			localGoType := goTypesOASTypes[typeAsString]
