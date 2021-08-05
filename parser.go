@@ -1547,20 +1547,6 @@ func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObje
 			p.debug("parseSchemaPropertiesFromStructFields err:", err)
 		} else {
 			fieldSchema.ID = fieldSchemaObjectID
-			foundSchema, ok := p.KnownIDSchema[fieldSchemaObjectID]
-			if ok {
-				if astField.Tag != nil && !isBasicGoType(foundSchema.Format) && foundSchema.Properties == nil { // inlined structs do not support tagging.
-					fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
-				}
-			} else {
-				fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
-				if err != nil {
-					p.debug(err)
-					return
-				}
-				fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
-			}
-
 			fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
 		}
 	} else if isGoTypeOASType(typeAsString) {
