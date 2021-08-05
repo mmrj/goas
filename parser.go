@@ -1589,6 +1589,9 @@ func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObje
 				propertySchema, _ := fieldSchema.Properties.Get(propertyName)
 				structSchema.Properties.Set(propertyName, propertySchema)
 			}
+			for _, required := range fieldSchema.Required {
+				structSchema.Required = append(structSchema.Required, required)
+			}
 		} else if len(fieldSchema.Ref) != 0 && len(fieldSchema.ID) != 0 {
 			refSchema, ok := p.KnownIDSchema[fieldSchema.ID]
 			if ok {
@@ -1606,10 +1609,6 @@ func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObje
 					if exist {
 						return
 					}
-					for _, required := range fieldSchema.Required {
-						structSchema.Required = append(structSchema.Required, required)
-					}
-
 					structSchema.Properties.Set(propertyName, refPropertySchema)
 				}
 			}
