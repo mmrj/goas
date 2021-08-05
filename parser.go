@@ -1561,16 +1561,6 @@ func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObje
 			if ok {
 				if astField.Tag != nil && !isBasicGoType(foundSchema.Format) && foundSchema.Properties == nil { // inlined structs do not support tagging.
 					fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
-				} else {
-					if foundSchema.Properties != nil {
-						if len(foundSchema.Required) > 0 {
-							assignRequiredPropsToParent(foundSchema, fieldSchema, structSchema)
-						} else {
-							fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
-						}
-					} else {
-						fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
-					}
 				}
 			} else {
 				fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
@@ -1615,6 +1605,9 @@ func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObje
 					_, exist := structSchema.Properties.Get(propertyName)
 					if exist {
 						return
+					}
+					for _, required := range fieldSchema.Required {
+						structSchema.Required = append(structSchema.Required, required)
 					}
 
 					structSchema.Properties.Set(propertyName, refPropertySchema)
@@ -1850,20 +1843,5 @@ func setNestedFieldSchemaProps(valuePrefix, typeAsString string, fieldSchema, st
 	} else {
 		fieldSchema.Type = &arrayType
 		fieldSchema.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(typeAsString)}
-	}
-}
-
-func assignRequiredPropsToParent(foundSchema, fieldSchema, structSchema *SchemaObject) {
-	for _, key := range foundSchema.Properties.Keys() {
-		parsedSchemaProp, _ := foundSchema.Properties.Get(key)
-		parsedSchema := parsedSchemaProp.(*SchemaObject)
-		if parsedSchema.Items != nil {
-			if parsedSchema.Items.Ref != "" {
-				fieldSchema.Ref = parsedSchema.Items.Ref
-			}
-		}
-	}
-	for _, required := range foundSchema.Required {
-		structSchema.Required = append(structSchema.Required, required)
 	}
 }
