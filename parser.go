@@ -1505,51 +1505,34 @@ func (p *parser) getTypeSpec(pkgPath, pkgName, typeName string) (*ast.TypeSpec, 
 	return astTypeSpec, true
 }
 
-func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, structSchema *SchemaObject, astFields []*ast.Field) {
-	if astFields == nil {
-		return
-	}
-	structSchema.Properties = orderedmap.New()
-	if structSchema.DisabledFieldNames == nil {
-		structSchema.DisabledFieldNames = map[string]struct{}{}
-	}
-
+func (p *parser) parseAstFields(pkgPath, pkgName string, structSchema *SchemaObject, astFields []*ast.Field) {
 	for _, astField := range astFields {
-		fieldSchema := &SchemaObject{}
-		typeAsString := p.getTypeAsString(astField.Type)
-		typeAsString = strings.TrimLeft(typeAsString, "*")
-		isSliceOrMap := strings.HasPrefix(typeAsString, "[]") || strings.HasPrefix(typeAsString, "map[]")
-		isInterface := strings.HasPrefix(typeAsString, "interface{}")
-		if isSliceOrMap || isInterface || typeAsString == "time.Time" {
-			splitType := strings.Split(typeAsString, "]")
-			if len(splitType) > 1 {
-				valueType := splitType[1]
-				if !isBasicGoType(valueType) {
-					if _, ok := p.KnownIDSchema[valueType]; ok {
-						if strings.HasPrefix(splitType[0], "map") {
-							fieldSchema.Type = &objectType
-							fieldSchema.AdditionalProperties = &SchemaObject{Ref: addSchemaRefLinkPrefix(p.getTypeAsString(valueType))}
-						} else {
-							fieldSchema.Type = &arrayType
-							fieldSchema.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(p.getTypeAsString(valueType))}
-						}
-					} else {
-						fieldSchemaSchemeaObjectID, err := p.registerType(pkgPath, pkgName, typeAsString)
-						fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
-						if err != nil {
-							p.debug(err)
-							return
-						}
-						if fieldSchemaSchemeaObjectID != "" {
-							structSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
-						}
-					}
+		p.parseAstField(pkgPath, pkgName, structSchema, astField)
+	}
+}
+
+func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObject, astField *ast.Field) {
+	fieldSchema := &SchemaObject{}
+	typeAsString := p.getTypeAsString(astField.Type)
+	isSliceOrMap := strings.HasPrefix(typeAsString, "[]") || strings.HasPrefix(typeAsString, "map[]")
+	isInterface := strings.HasPrefix(typeAsString, "interface{}")
+	if isSliceOrMap || isInterface || typeAsString == "time.Time" {
+		splitType := strings.Split(typeAsString, "]")
+		if len(splitType) > 1 {
+			valueType := splitType[1]
+			if !isBasicGoType(valueType) {
+				if _, ok := p.KnownIDSchema[valueType]; ok {
+					nestedType := p.getTypeAsString(splitType[1])
+					setNestedFieldSchemaProps(splitType[0], nestedType, fieldSchema, structSchema)
 				} else {
-					var err error
+					fieldSchemaObjectID, err := p.registerType(pkgPath, pkgName, typeAsString)
 					fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
 					if err != nil {
 						p.debug(err)
 						return
+					}
+					if fieldSchemaObjectID != "" {
+						structSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
 					}
 				}
 			} else {
@@ -1560,105 +1543,124 @@ func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, 
 					return
 				}
 			}
-		} else if !isBasicGoType(typeAsString) {
-			fieldSchemaSchemeaObjectID, err := p.registerType(pkgPath, pkgName, typeAsString)
+		} else {
+			var err error
+			fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
 			if err != nil {
-				p.debug("parseSchemaPropertiesFromStructFields err:", err)
-			} else {
-				fieldSchema.ID = fieldSchemaSchemeaObjectID
-				foundSchema, ok := p.KnownIDSchema[fieldSchemaSchemeaObjectID]
-				if ok {
-					if astField.Tag != nil && !isBasicGoType(foundSchema.Format) && foundSchema.Properties == nil && !reflect.DeepEqual(foundSchema, SchemaObject{}) { // inlined structs do not support tagging.
-						fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
-					} else {
-						if foundSchema.Properties != nil {
-							if len(foundSchema.Required) > 0 {
-								for _, key := range foundSchema.Properties.Keys() {
-									parsedSchemaProp, _ := foundSchema.Properties.Get(key)
-									parsedSchema := parsedSchemaProp.(*SchemaObject)
-									if parsedSchema.Items != nil {
-										if parsedSchema.Items.Ref != "" {
-											fieldSchema.Ref = parsedSchema.Items.Ref
-										}
+				p.debug(err)
+				return
+			}
+		}
+	} else if !isBasicGoType(typeAsString) {
+		fieldSchemaObjectID, err := p.registerType(pkgPath, pkgName, typeAsString)
+		if err != nil {
+			p.debug("parseSchemaPropertiesFromStructFields err:", err)
+		} else {
+			fieldSchema.ID = fieldSchemaObjectID
+			foundSchema, ok := p.KnownIDSchema[fieldSchemaObjectID]
+			if ok {
+				if astField.Tag != nil && !isBasicGoType(foundSchema.Format) && foundSchema.Properties == nil && !reflect.DeepEqual(foundSchema, SchemaObject{}) { // inlined structs do not support tagging.
+					fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
+				} else {
+					if foundSchema.Properties != nil {
+						if len(foundSchema.Required) > 0 {
+							for _, key := range foundSchema.Properties.Keys() {
+								parsedSchemaProp, _ := foundSchema.Properties.Get(key)
+								parsedSchema := parsedSchemaProp.(*SchemaObject)
+								if parsedSchema.Items != nil {
+									if parsedSchema.Items.Ref != "" {
+										fieldSchema.Ref = parsedSchema.Items.Ref
 									}
 								}
-								for _, required := range foundSchema.Required {
-									structSchema.Required = append(structSchema.Required, required)
-								}
-							} else {
-								fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
+							}
+							for _, required := range foundSchema.Required {
+								structSchema.Required = append(structSchema.Required, required)
 							}
 						} else {
-							fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
+							fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
 						}
+					} else {
+						fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
 					}
-				} else {
-					fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
-					if err != nil {
-						p.debug(err)
+				}
+			} else {
+				fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
+				if err != nil {
+					p.debug(err)
+					return
+				}
+				fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
+			}
+
+			fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
+		}
+	} else if isGoTypeOASType(typeAsString) {
+		localGoType := goTypesOASTypes[typeAsString]
+		fieldSchema.Type = &localGoType
+		checkFormatInt64(typeAsString, fieldSchema)
+	}
+	// for embedded fields
+	if len(astField.Names) == 0 {
+		if fieldSchema.Properties != nil {
+			for _, propertyName := range fieldSchema.Properties.Keys() {
+				_, exist := structSchema.Properties.Get(propertyName)
+				if exist {
+					return
+				}
+				propertySchema, _ := fieldSchema.Properties.Get(propertyName)
+				structSchema.Properties.Set(propertyName, propertySchema)
+			}
+		} else if len(fieldSchema.Ref) != 0 && len(fieldSchema.ID) != 0 {
+			refSchema, ok := p.KnownIDSchema[fieldSchema.ID]
+			if ok {
+				if refSchema.Properties == nil {
+					p.debug("nil refSchema.Properties")
+					return
+				}
+				for _, propertyName := range refSchema.Properties.Keys() {
+					refPropertySchema, _ := refSchema.Properties.Get(propertyName)
+					_, disabled := structSchema.DisabledFieldNames[refPropertySchema.(*SchemaObject).FieldName]
+					if disabled {
 						return
 					}
-					fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
-				}
-
-				fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaSchemeaObjectID)
-			}
-		} else if isGoTypeOASType(typeAsString) {
-			localGoType := goTypesOASTypes[typeAsString]
-			fieldSchema.Type = &localGoType
-			checkFormatInt64(typeAsString, fieldSchema)
-		}
-		// for embedded fields
-		if len(astField.Names) == 0 {
-			if fieldSchema.Properties != nil {
-				for _, propertyName := range fieldSchema.Properties.Keys() {
 					_, exist := structSchema.Properties.Get(propertyName)
 					if exist {
-						continue
+						return
 					}
-					propertySchema, _ := fieldSchema.Properties.Get(propertyName)
-					structSchema.Properties.Set(propertyName, propertySchema)
-				}
-			} else if len(fieldSchema.Ref) != 0 && len(fieldSchema.ID) != 0 {
-				refSchema, ok := p.KnownIDSchema[fieldSchema.ID]
-				if ok {
-					if refSchema.Properties == nil {
-						p.debug("nil refSchema.Properties")
-						continue
-					}
-					for _, propertyName := range refSchema.Properties.Keys() {
-						refPropertySchema, _ := refSchema.Properties.Get(propertyName)
-						_, disabled := structSchema.DisabledFieldNames[refPropertySchema.(*SchemaObject).FieldName]
-						if disabled {
-							continue
-						}
-						_, exist := structSchema.Properties.Get(propertyName)
-						if exist {
-							continue
-						}
 
-						structSchema.Properties.Set(propertyName, refPropertySchema)
-					}
+					structSchema.Properties.Set(propertyName, refPropertySchema)
 				}
 			}
-		} else {
-			name := astField.Names[0].Name
-			fieldSchema.FieldName = name
-			_, disabled := structSchema.DisabledFieldNames[name]
-			if disabled {
-				continue
-			}
-
-			newName, skip := parseStructTags(astField, structSchema, fieldSchema, name)
-			if skip {
-				continue
-			}
-
-			name = newName
-
-			structSchema.Properties.Set(name, fieldSchema)
 		}
+	} else {
+		name := astField.Names[0].Name
+		fieldSchema.FieldName = name
+		_, disabled := structSchema.DisabledFieldNames[name]
+		if disabled {
+			return
+		}
+
+		newName, skip := parseStructTags(astField, structSchema, fieldSchema, name)
+		if skip {
+			return
+		}
+
+		name = newName
+
+		structSchema.Properties.Set(name, fieldSchema)
 	}
+}
+
+func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, structSchema *SchemaObject, astFields []*ast.Field) {
+	if astFields == nil {
+		return
+	}
+	structSchema.Properties = orderedmap.New()
+	if structSchema.DisabledFieldNames == nil {
+		structSchema.DisabledFieldNames = map[string]struct{}{}
+	}
+
+	p.parseAstFields(pkgPath, pkgName, structSchema, astFields)
 }
 
 func (p *parser) getTypeAsString(fieldType interface{}) string {
@@ -1850,4 +1852,14 @@ func sortedFileKeys(m map[string]*ast.File) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+func setNestedFieldSchemaProps(valuePrefix, typeAsString string, fieldSchema, structSchema *SchemaObject) {
+	if strings.HasPrefix(valuePrefix, "map") {
+		fieldSchema.Type = &objectType
+		fieldSchema.AdditionalProperties = &SchemaObject{Ref: addSchemaRefLinkPrefix(typeAsString)}
+	} else {
+		fieldSchema.Type = &arrayType
+		fieldSchema.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(typeAsString)}
+	}
 }
