@@ -1559,7 +1559,7 @@ func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObje
 			fieldSchema.ID = fieldSchemaObjectID
 			foundSchema, ok := p.KnownIDSchema[fieldSchemaObjectID]
 			if ok {
-				if astField.Tag != nil && !isBasicGoType(foundSchema.Format) && foundSchema.Properties == nil && !reflect.DeepEqual(foundSchema, SchemaObject{}) { // inlined structs do not support tagging.
+				if astField.Tag != nil && !isBasicGoType(foundSchema.Format) && foundSchema.Properties == nil { // inlined structs do not support tagging.
 					fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
 				} else {
 					if foundSchema.Properties != nil {
