@@ -1564,18 +1564,7 @@ func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObje
 				} else {
 					if foundSchema.Properties != nil {
 						if len(foundSchema.Required) > 0 {
-							for _, key := range foundSchema.Properties.Keys() {
-								parsedSchemaProp, _ := foundSchema.Properties.Get(key)
-								parsedSchema := parsedSchemaProp.(*SchemaObject)
-								if parsedSchema.Items != nil {
-									if parsedSchema.Items.Ref != "" {
-										fieldSchema.Ref = parsedSchema.Items.Ref
-									}
-								}
-							}
-							for _, required := range foundSchema.Required {
-								structSchema.Required = append(structSchema.Required, required)
-							}
+							hoistRequiredProps(foundSchema, fieldSchema, structSchema)
 						} else {
 							fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
 						}
@@ -1861,5 +1850,20 @@ func setNestedFieldSchemaProps(valuePrefix, typeAsString string, fieldSchema, st
 	} else {
 		fieldSchema.Type = &arrayType
 		fieldSchema.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(typeAsString)}
+	}
+}
+
+func hoistRequiredProps(foundSchema, fieldSchema, structSchema *SchemaObject) {
+	for _, key := range foundSchema.Properties.Keys() {
+		parsedSchemaProp, _ := foundSchema.Properties.Get(key)
+		parsedSchema := parsedSchemaProp.(*SchemaObject)
+		if parsedSchema.Items != nil {
+			if parsedSchema.Items.Ref != "" {
+				fieldSchema.Ref = parsedSchema.Items.Ref
+			}
+		}
+	}
+	for _, required := range foundSchema.Required {
+		structSchema.Required = append(structSchema.Required, required)
 	}
 }
