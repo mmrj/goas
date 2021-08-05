@@ -1518,29 +1518,19 @@ func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObje
 	isInterface := strings.HasPrefix(typeAsString, "interface{}")
 	if isSliceOrMap || isInterface || typeAsString == "time.Time" {
 		splitType := strings.Split(typeAsString, "]")
-		if len(splitType) > 1 {
-			valueType := splitType[1]
-			if !isBasicGoType(valueType) {
-				if _, ok := p.KnownIDSchema[valueType]; ok {
-					nestedType := p.getTypeAsString(splitType[1])
-					setNestedFieldSchemaProps(splitType[0], nestedType, fieldSchema, structSchema)
-				} else {
-					fieldSchemaObjectID, err := p.registerType(pkgPath, pkgName, typeAsString)
-					fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
-					if err != nil {
-						p.debug(err)
-						return
-					}
-					if fieldSchemaObjectID != "" {
-						structSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
-					}
-				}
+		if len(splitType) > 1 && !isBasicGoType(splitType[1]) {
+			if _, ok := p.KnownIDSchema[splitType[1]]; ok {
+				nestedType := p.getTypeAsString(splitType[1])
+				setNestedFieldSchemaProps(splitType[0], nestedType, fieldSchema, structSchema)
 			} else {
-				var err error
+				fieldSchemaObjectID, err := p.registerType(pkgPath, pkgName, typeAsString)
 				fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
 				if err != nil {
 					p.debug(err)
 					return
+				}
+				if fieldSchemaObjectID != "" {
+					structSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
 				}
 			}
 		} else {
