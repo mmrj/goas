@@ -20,6 +20,24 @@
     }
   ],
   "paths": {
+    "/api/v2/birds": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Bird"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get all birds",
+        "operationId": "getBirds"
+      }
+    },
     "/api/v2/foo": {
       "get": {
         "responses": {
@@ -49,31 +67,6 @@
         "summary": "Get all foos",
         "description": " Get all foos",
         "operationId": "getAllFoos"
-      },
-      "put": {
-        "responses": {
-          "200": {
-            "description": "Successful foo response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FooResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Invalid access token"
-          },
-          "403": {
-            "description": "Forbidden"
-          },
-          "404": {
-            "description": "Invalid resource identifier"
-          }
-        },
-        "summary": "Put foo",
-        "description": " Overwrite a foo"
       },
       "post": {
         "responses": {
@@ -109,6 +102,31 @@
           },
           "required": true
         }
+      },
+      "put": {
+        "responses": {
+          "200": {
+            "description": "Successful foo response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FooResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid access token"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Invalid resource identifier"
+          }
+        },
+        "summary": "Put foo",
+        "description": " Overwrite a foo"
       }
     },
     "/api/v2/foo-spaces": {
@@ -252,6 +270,31 @@
   },
   "components": {
     "schemas": {
+      "Animal": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "Bird": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "airspeedVelocity": {
+            "type": "number"
+          }
+        }
+      },
       "BsonID": {
         "type": "string"
       },
@@ -263,6 +306,20 @@
         "properties": {
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "FooBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "Example": {
+            "$ref": "#/components/schemas/DoubleAlias"
+          },
+          "Required": {
+            "type": "boolean"
           }
         }
       },
@@ -293,10 +350,10 @@
         "type": "object",
         "properties": {
           "operations": {
+            "type": "array",
             "items": {
               "$ref": "#/components/schemas/FooPatchOperation"
-            },
-            "type": "array"
+            }
           }
         }
       },
@@ -322,15 +379,11 @@
             "example": 6
           },
           "msg": {},
-          "myEnum": {
-            "enum": [ "value1", "value2"],
-            "type": "string"
-          },
           "foo": {
+            "type": "array",
             "items": {
               "$ref": "#/components/schemas/InnerFoo"
-            },
-            "type": "array"
+            }
           },
           "environments": {
             "type": "object",
@@ -358,20 +411,13 @@
           "randomBool": {
             "type": "boolean",
             "example": true
-          }
-        }
-      },
-      "FooBody": {
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
           },
-          "Example": {
-            "$ref": "#/components/schemas/DoubleAlias"
-          },
-          "Required": {
-            "type": "boolean"
+          "myEnum": {
+            "type": "string",
+            "enum": [
+              "value1",
+              "value2"
+            ]
           }
         }
       },

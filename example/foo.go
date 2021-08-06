@@ -57,6 +57,16 @@ type FooMergePatch struct {
 	Count int64 `json:"count"`
 }
 
+type Bird struct {
+	Animal
+	AirspeedVelocity float32 `json:"airspeedVelocity"`
+}
+
+// TODO since Animal is not used directly and probably shouldn't be included in the output spec
+type Animal struct {
+	name string `required:"true"`
+}
+
 // @Title Get all foos
 // @Tag Foo
 // @Description Get all foos
@@ -128,5 +138,13 @@ var getVarFoo = func() {
 // @Failure 403 "Forbidden"
 // @Failure 404 "Invalid resource identifier"
 func getFoosSpacesInTag() {
+
+}
+
+// @Title Get all birds
+// @OperationId getBirds
+// @Route /api/v2/birds [get]
+// @Success 200 object Bird "Success"
+func getBirds() {
 
 }

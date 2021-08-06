@@ -1587,6 +1587,7 @@ func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObje
 					}
 					structSchema.Properties.Set(propertyName, refPropertySchema)
 				}
+				structSchema.Required = append(structSchema.Required, refSchema.Required...)
 			}
 		}
 	} else {
