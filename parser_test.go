@@ -340,19 +340,19 @@ func Test_parseOperationTags(t *testing.T) {
 		p.OpenAPI.Tags = append(p.OpenAPI.Tags, TagDefinition{Name: "foo", Description: &ReffableString{Value: "bar"}})
 
 		var comment []*ast.Comment
-		comment = append(comment, &ast.Comment{Slash: 0, Text: "// @tag foo"})
+		comment = append(comment, &ast.Comment{Slash: 0, Text: "// @Tag foo"})
 		err = p.parseOperation(p.ModulePath, "", comment)
 		require.NoError(t, err)
 	})
 
-	t.Run("Parses operation tags", func(t *testing.T) {
+	t.Run("Errors when tag in operation is not in list of tags", func(t *testing.T) {
 		p, err := newParser("example/", "example/main.go", "", false)
 		require.NoError(t, err)
 
 		p.OpenAPI.Tags = append(p.OpenAPI.Tags, TagDefinition{Name: "foo", Description: &ReffableString{Value: "bar"}})
 
 		var comment []*ast.Comment
-		comment = append(comment, &ast.Comment{Slash: 0, Text: "// @tag Foo"})
+		comment = append(comment, &ast.Comment{Slash: 0, Text: "// @Tag Foo"})
 		err = p.parseOperation(p.ModulePath, "", comment)
 		require.Error(t, err)
 	})
