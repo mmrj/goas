@@ -469,6 +469,12 @@
     {
       "name": "Bar",
       "description": "Baz"
+    },
+    {
+      "name": "Vfoo"
+    },
+    {
+      "name": "Foo With Spaces"
     }
   ]
 }
