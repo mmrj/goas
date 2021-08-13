@@ -840,6 +840,11 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 		return nil
 	}
 	var err error
+	var tagList []string
+	for _, tag := range p.OpenAPI.Tags {
+		tagList = append(tagList, tag.Name)
+	}
+
 	for _, astComment := range astComments {
 		comment := strings.TrimSpace(strings.TrimLeft(astComment.Text, "/"))
 		if len(comment) == 0 {
@@ -864,7 +869,10 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 			if resource == "" {
 				resource = "others"
 			}
-			if !isInStringList(operation.Tags, resource) {
+
+			if !isInStringList(tagList, resource) {
+				err = fmt.Errorf("Could not find tag \"%s\" in the main list of tags", resource)
+			} else if !isInStringList(operation.Tags, resource) {
 				operation.Tags = append(operation.Tags, resource)
 			}
 		case "@route", "@router":

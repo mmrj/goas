@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"go/ast"
 	"io/ioutil"
 	"testing"
 
@@ -327,6 +328,32 @@ func Test_parseRequestBodyExample(t *testing.T) {
 
 	t.Run("Errors if example is invalid", func(t *testing.T) {
 		_, err := parseRequestBodyExample("{name:\\\"Smaug\\\"}")
+		require.Error(t, err)
+	})
+}
+
+func Test_parseOperationTags(t *testing.T) {
+	t.Run("Parses operation tags", func(t *testing.T) {
+		p, err := newParser("example/", "example/main.go", "", false)
+		require.NoError(t, err)
+
+		p.OpenAPI.Tags = append(p.OpenAPI.Tags, TagDefinition{Name: "foo", Description: &ReffableString{Value: "bar"}})
+
+		var comment []*ast.Comment
+		comment = append(comment, &ast.Comment{Slash: 0, Text: "// @Tag foo"})
+		err = p.parseOperation(p.ModulePath, "", comment)
+		require.NoError(t, err)
+	})
+
+	t.Run("Errors when tag in operation is not in list of tags", func(t *testing.T) {
+		p, err := newParser("example/", "example/main.go", "", false)
+		require.NoError(t, err)
+
+		p.OpenAPI.Tags = append(p.OpenAPI.Tags, TagDefinition{Name: "foo", Description: &ReffableString{Value: "bar"}})
+
+		var comment []*ast.Comment
+		comment = append(comment, &ast.Comment{Slash: 0, Text: "// @Tag Foo"})
+		err = p.parseOperation(p.ModulePath, "", comment)
 		require.Error(t, err)
 	})
 }
