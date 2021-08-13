@@ -10,24 +10,6 @@ var (
 	defaultEmptyMap = make(map[string]string)
 )
 
-func Test_genSchemaObjectID(t *testing.T) {
-	t.Run("check none", func(t *testing.T) {
-		result := genSchemaObjectID("", "sample", defaultEmptyMap)
-
-		require.Equal(t, "sample", string(result))
-	})
-	t.Run("check single", func(t *testing.T) {
-		result := genSchemaObjectID("sample", "sample", defaultEmptyMap)
-
-		require.Equal(t, "sample.sample", string(result))
-	})
-	t.Run("check multiple", func(t *testing.T) {
-		result := genSchemaObjectID("test.sample", "sample", defaultEmptyMap)
-
-		require.Equal(t, "test.sample.sample", string(result))
-	})
-}
-
 func Test_getAliasedTypeName(t *testing.T) {
 	t.Run("check no change", func(t *testing.T) {
 		result := getAliasedTypeName("mypackage.test", defaultEmptyMap)

@@ -51,7 +51,11 @@ type parser struct {
 	PkgPathAstPkgCache      map[string]map[string]*ast.Package
 	PkgNameImportedPkgAlias map[string]map[string][]string
 
-	Debug bool
+	// map of package name to type name to schema name
+	ApiSchemaNames map[string]map[string]string
+
+	Debug        bool
+	OmitPackages bool
 }
 
 type pkg struct {
@@ -65,7 +69,7 @@ var (
 	arrayType  = "array"
 )
 
-func newParser(modulePath, mainFilePath, handlerPath string, debug bool) (*parser, error) {
+func newParser(modulePath, mainFilePath, handlerPath string, debug bool, omitPackages bool) (*parser, error) {
 	p := &parser{
 		CorePkgs:                map[string]bool{},
 		KnownPkgs:               []pkg{},
@@ -76,6 +80,7 @@ func newParser(modulePath, mainFilePath, handlerPath string, debug bool) (*parse
 		PkgPathAstPkgCache:      map[string]map[string]*ast.Package{},
 		PkgNameImportedPkgAlias: map[string]map[string][]string{},
 		Debug:                   debug,
+		OmitPackages:            omitPackages,
 	}
 	p.OpenAPI.OpenAPI = OpenAPIVersion
 	p.OpenAPI.Paths = make(PathsObject)
@@ -205,6 +210,10 @@ func newParser(modulePath, mainFilePath, handlerPath string, debug bool) (*parse
 	}
 	p.HandlerPath = handlerPath
 	p.debugf("handler path: %s", p.HandlerPath)
+
+	if p.ApiSchemaNames == nil {
+		p.ApiSchemaNames = map[string]map[string]string{}
+	}
 
 	return p, nil
 }
@@ -731,7 +740,14 @@ func (p *parser) parseTypeSpecs() error {
 						// find type declaration
 						for _, astSpec := range astGenDeclaration.Specs {
 							if typeSpec, ok := astSpec.(*ast.TypeSpec); ok {
-								p.TypeSpecs[pkgName][typeSpec.Name.String()] = typeSpec
+								typeName := typeSpec.Name.String()
+								p.TypeSpecs[pkgName][typeName] = typeSpec
+								if astGenDeclaration.Doc != nil {
+									err := p.parseTypeAnnotations(pkgName, typeName, astGenDeclaration.Doc)
+									if err != nil {
+										return err
+									}
+								}
 							}
 						}
 					} else if astFuncDeclaration, ok := astDeclaration.(*ast.FuncDecl); ok {
@@ -771,11 +787,31 @@ func (p *parser) parseTypeSpecs() error {
 	return nil
 }
 
+func (p *parser) parseTypeAnnotations(pkgName string, typeName string, commentGroup *ast.CommentGroup) error {
+	for _, comment := range commentGroup.List {
+		fields := strings.Fields(strings.TrimLeft(comment.Text, "/"))
+		if len(fields) == 0 {
+			continue
+		}
+		switch strings.ToLower(fields[0]) {
+		case "@apischemaname":
+			if len(fields) < 2 {
+				return fmt.Errorf("expected \"// @ApiSchemaName {alias}\" received %s", comment.Text)
+			}
+			if p.ApiSchemaNames[pkgName] == nil {
+				p.ApiSchemaNames[pkgName] = map[string]string{}
+			}
+			p.ApiSchemaNames[pkgName][typeName] = fields[1]
+		}
+	}
+
+	return nil
+}
+
 func (p *parser) parsePaths() error {
 	for i := range p.KnownPkgs {
 		pkgPath := p.KnownPkgs[i].Path
 		pkgName := p.KnownPkgs[i].Name
-		// p.debug(pkgName, "->", pkgPath)
 
 		astPkgs, err := p.getPkgAst(pkgPath)
 		if err != nil {
@@ -890,7 +926,11 @@ func (p *parser) parseDescription(operation *OperationObject, description string
 	if err != nil {
 		return err
 	}
-	operation.Description = strings.Join([]string{operation.Description, desc}, " ")
+	if operation.Description == "" {
+		operation.Description = desc
+	} else {
+		operation.Description = operation.Description + " " + desc
+	}
 	return nil
 }
 
@@ -1289,7 +1329,7 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 	if strings.HasPrefix(typeName, "[]") {
 		schemaObject.Type = &arrayType
 		itemTypeName := typeName[2:]
-		schema, ok := p.KnownIDSchema[genSchemaObjectID(pkgName, itemTypeName, p.PackageAliases)]
+		schema, ok := p.KnownIDSchema[p.genSchemaObjectID(pkgName, itemTypeName)]
 		if ok {
 			schemaObject.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(schema.ID)}
 			return &schemaObject, nil
@@ -1302,7 +1342,7 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 	} else if strings.HasPrefix(typeName, "map[]") {
 		schemaObject.Type = &objectType
 		itemTypeName := typeName[5:]
-		schema, ok := p.KnownIDSchema[genSchemaObjectID(pkgName, itemTypeName, p.PackageAliases)]
+		schema, ok := p.KnownIDSchema[p.genSchemaObjectID(pkgName, itemTypeName)]
 		if ok {
 			schemaObject.AdditionalProperties = &SchemaObject{Ref: addSchemaRefLinkPrefix(schema.ID)}
 			return &schemaObject, nil
@@ -1344,7 +1384,7 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 			}
 		}
 		schemaObject.PkgName = pkgName
-		schemaObject.ID = genSchemaObjectID(pkgName, typeName, p.PackageAliases)
+		schemaObject.ID = p.genSchemaObjectID(pkgName, typeName)
 		p.KnownIDSchema[schemaObject.ID] = &schemaObject
 	} else {
 		guessPkgName := strings.Join(typeNameParts[:len(typeNameParts)-1], "/")
@@ -1392,7 +1432,7 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 					guessTypeName, guessPkgName)
 			}
 			schemaObject.PkgName = guessPkgName
-			schemaObject.ID = genSchemaObjectID(guessPkgName, guessTypeName, p.PackageAliases)
+			schemaObject.ID = p.genSchemaObjectID(guessPkgName, guessTypeName)
 			p.KnownIDSchema[schemaObject.ID] = &schemaObject
 		}
 		pkgPath, pkgName = guessPkgPath, guessPkgName
@@ -1766,7 +1806,7 @@ func (p *parser) debugf(format string, args ...interface{}) {
 
 // checkCache loops over possible aliased package names for a type to see if it's already in cache and returns that if found.
 func (p *parser) checkCache(pkgName, typeName string) *SchemaObject {
-	currentName := genSchemaObjectID(pkgName, typeName, p.PackageAliases)
+	currentName := p.genSchemaObjectID(pkgName, typeName)
 	if knownObj, ok := p.KnownIDSchema[currentName]; ok {
 		return knownObj
 	} else if knownObj, ok := p.KnownIDSchema[typeName]; ok {
@@ -1795,7 +1835,22 @@ func (p *parser) checkCache(pkgName, typeName string) *SchemaObject {
 
 	}
 	return nil
+}
 
+func (p *parser) genSchemaObjectID(pkgName, typeName string) string {
+	apiSchemaName, ok := p.ApiSchemaNames[pkgName][typeName]
+	if ok {
+		return apiSchemaName
+	}
+	aliasedPkgName := getAliasedPackageName(pkgName, p.PackageAliases)
+	aliasedTypeName := getAliasedTypeName(typeName, p.PackageAliases)
+	typeNameParts := strings.Split(aliasedTypeName, ".")
+	pkgNameParts := strings.Split(aliasedPkgName, "/")
+	if p.OmitPackages || pkgNameParts[len(pkgNameParts)-1] == "" {
+		return typeNameParts[len(typeNameParts)-1]
+	} else {
+		return strings.Join(append([]string{pkgNameParts[len(pkgNameParts)-1]}, typeNameParts[len(typeNameParts)-1]), ".")
+	}
 }
 
 func sortedPackageKeys(m map[string]*ast.Package) []string {

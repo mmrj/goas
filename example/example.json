@@ -28,7 +28,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Bird"
+                  "$ref": "#/components/schemas/Birb"
                 }
               }
             }
@@ -65,7 +65,7 @@
           "Foo"
         ],
         "summary": "Get all foos",
-        "description": " Get all foos",
+        "description": "Get all foos",
         "operationId": "getAllFoos"
       },
       "post": {
@@ -91,7 +91,7 @@
           }
         },
         "summary": "Post foo",
-        "description": " Post a foo",
+        "description": "Post a foo",
         "requestBody": {
           "content": {
             "application/json": {
@@ -126,7 +126,7 @@
           }
         },
         "summary": "Put foo",
-        "description": " Overwrite a foo"
+        "description": "Overwrite a foo"
       }
     },
     "/api/v2/foo-spaces": {
@@ -156,7 +156,7 @@
           "Foo With Spaces"
         ],
         "summary": "Get foos with spaces",
-        "description": " Get foos with spaces",
+        "description": "Get foos with spaces",
         "operationId": "getFoosWithSpaces"
       }
     },
@@ -234,7 +234,7 @@
           }
         },
         "summary": "Get inner foos",
-        "description": " Get Inner Foos"
+        "description": "Get Inner Foos"
       }
     },
     "/api/v2/vfoo": {
@@ -264,7 +264,7 @@
           "Vfoo"
         ],
         "summary": "Get Foo as var",
-        "description": " get a foo var"
+        "description": "get a foo var"
       }
     }
   },
@@ -281,7 +281,7 @@
           }
         }
       },
-      "Bird": {
+      "Birb": {
         "type": "object",
         "required": [
           "name"

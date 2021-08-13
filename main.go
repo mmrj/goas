@@ -12,7 +12,7 @@ var version = "v1.0.0"
 var flags = []cli.Flag{
 	cli.StringFlag{
 		Name:  "module-path",
-		Value: "",
+		Value: ".",
 		Usage: "goas will search @comment under the module",
 	},
 	cli.StringFlag{
@@ -34,14 +34,18 @@ var flags = []cli.Flag{
 		Name:  "debug",
 		Usage: "show debug message",
 	},
+	cli.BoolFlag{
+		Name:  "omit-packages",
+		Usage: "Omit packages from schema names. An error will be thrown if there is a conflict.",
+	},
 }
 
 func action(c *cli.Context) error {
-	p, err := newParser(c.GlobalString("module-path"), c.GlobalString("main-file-path"), c.GlobalString("handler-path"), c.GlobalBool("debug"))
+	p, err := newParser(c.GlobalString("module-path"), c.GlobalString("main-file-path"), c.GlobalString("handler-path"), c.GlobalBool("debug"), c.GlobalBool("omit-packages"))
 	if err != nil {
 		return err
 	}
-	// fmt.Printf("%+v\n", p)
+
 	return p.CreateOASFile(c.GlobalString("output"))
 }
 

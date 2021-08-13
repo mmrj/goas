@@ -57,6 +57,7 @@ type FooMergePatch struct {
 	Count int64 `json:"count"`
 }
 
+// @ApiSchemaName Birb
 type Bird struct {
 	Animal
 	AirspeedVelocity float32 `json:"airspeedVelocity"`

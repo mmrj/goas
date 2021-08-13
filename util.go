@@ -151,22 +151,6 @@ func addSchemaRefLinkPrefix(name string) string {
 	return replaceBackslash("#/components/schemas/" + name)
 }
 
-func trimeSchemaRefLinkPrefix(ref string) string {
-	return strings.TrimPrefix(ref, "#/components/schemas/")
-}
-
-func genSchemaObjectID(pkgName, typeName string, aliases map[string]string) string {
-	aliasedPkgName := getAliasedPackageName(pkgName, aliases)
-	aliasedTypeName := getAliasedTypeName(typeName, aliases)
-	typeNameParts := strings.Split(aliasedTypeName, ".")
-	pkgNameParts := strings.Split(aliasedPkgName, "/")
-	if pkgNameParts[len(pkgNameParts)-1] == "" {
-		return typeNameParts[len(typeNameParts)-1]
-	} else {
-		return strings.Join(append([]string{pkgNameParts[len(pkgNameParts)-1]}, typeNameParts[len(typeNameParts)-1]), ".")
-	}
-}
-
 func getAliasedPackageName(pkgName string, aliases map[string]string) string {
 	pkgNameParsed := replaceBackslash(pkgName)
 	pkgNameParts := strings.Split(pkgNameParsed, "/")

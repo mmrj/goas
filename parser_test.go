@@ -12,7 +12,7 @@ import (
 )
 
 func TestExample(t *testing.T) {
-	p, err := newParser("example/", "example/main.go", "", false)
+	p, err := newParser("example/", "example/main.go", "", false, false)
 	require.NoError(t, err)
 
 	err = p.parse()
@@ -30,7 +30,7 @@ func TestExample(t *testing.T) {
 func TestDeterministic(t *testing.T) {
 	var allOutputs []string
 	for i := 0; i < 10; i++ {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 
 		err = p.parse()
@@ -47,7 +47,7 @@ func TestDeterministic(t *testing.T) {
 }
 
 func Test_parseRouteComment(t *testing.T) {
-	p, err := newParser("example/", "example/main.go", "", false)
+	p, err := newParser("example/", "example/main.go", "", false, false)
 	require.NoError(t, err)
 
 	operation := &OperationObject{
@@ -61,7 +61,7 @@ func Test_parseRouteComment(t *testing.T) {
 }
 
 func Test_infoDescriptionRef(t *testing.T) {
-	p, err := newParser("example/", "example/main.go", "", false)
+	p, err := newParser("example/", "example/main.go", "", false, false)
 	require.NoError(t, err)
 	p.OpenAPI.Info.Description = &ReffableString{Value: "$ref:http://dopeoplescroll.com/"}
 
@@ -103,7 +103,7 @@ func Test_parseTags(t *testing.T) {
 
 func Test_handleCompoundType(t *testing.T) {
 	t.Run("oneOf", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		result, err := p.handleCompoundType("./example", "example.com/example", "oneOf(string,[]string)")
 		require.NoError(t, err)
@@ -113,7 +113,7 @@ func Test_handleCompoundType(t *testing.T) {
 	})
 
 	t.Run("anyOf", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		result, err := p.handleCompoundType("./example", "example.com/example", "anyOf(string,[]string)")
 		require.NoError(t, err)
@@ -123,7 +123,7 @@ func Test_handleCompoundType(t *testing.T) {
 	})
 
 	t.Run("allOf", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		result, err := p.handleCompoundType("./example", "example.com/example", "allOf(string,[]string)")
 		require.NoError(t, err)
@@ -133,7 +133,7 @@ func Test_handleCompoundType(t *testing.T) {
 	})
 
 	t.Run("case insensitive oneOf", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		result, err := p.handleCompoundType("./example", "example.com/example", "oneof(string,[]string)")
 		require.NoError(t, err)
@@ -143,7 +143,7 @@ func Test_handleCompoundType(t *testing.T) {
 	})
 
 	t.Run("case insensitive anyOf", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		result, err := p.handleCompoundType("./example", "example.com/example", "anyof(string,[]string)")
 		require.NoError(t, err)
@@ -153,7 +153,7 @@ func Test_handleCompoundType(t *testing.T) {
 	})
 
 	t.Run("case insensitive allOf", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		result, err := p.handleCompoundType("./example", "example.com/example", "allof(string,[]string)")
 		require.NoError(t, err)
@@ -163,7 +163,7 @@ func Test_handleCompoundType(t *testing.T) {
 	})
 
 	t.Run("not", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		result, err := p.handleCompoundType("./example", "example.com/example", "not(string)")
 		require.NoError(t, err)
@@ -173,7 +173,7 @@ func Test_handleCompoundType(t *testing.T) {
 	})
 
 	t.Run("handles whitespace", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		result, err := p.handleCompoundType("./example", "example.com/example", "allOf(  string, []string )")
 		require.NoError(t, err)
@@ -183,14 +183,14 @@ func Test_handleCompoundType(t *testing.T) {
 	})
 
 	t.Run("not only accepts 1 arg", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		_, notErr := p.handleCompoundType("./example", "example.com/example", "not(string,int32)")
 		require.Error(t, notErr)
 	})
 
 	t.Run("error when no args", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		_, notErr := p.handleCompoundType("./example", "example.com/example", "oneOf()")
 		require.Error(t, notErr)
@@ -199,7 +199,7 @@ func Test_handleCompoundType(t *testing.T) {
 
 func Test_explodeRefs(t *testing.T) {
 	t.Run("Info.Description unchanged when not a ref", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		p.OpenAPI.Info.Description = &ReffableString{Value: "Foo"}
 
@@ -214,7 +214,7 @@ func Test_explodeRefs(t *testing.T) {
 		defer httpmock.DeactivateAndReset()
 		httpmock.RegisterResponder("GET", "https://example.com",
 			httpmock.NewStringResponder(200, "The quick brown fox jumped over the lazy dog"))
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		p.OpenAPI.Info.Description = &ReffableString{Value: "$ref:https://example.com"}
 
@@ -225,7 +225,7 @@ func Test_explodeRefs(t *testing.T) {
 	})
 
 	t.Run("Tags[].Description unchanged when not a ref", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		p.OpenAPI.Tags = []TagDefinition{{Name: "Foo", Description: &ReffableString{Value: "Foobar"}}}
 
@@ -240,7 +240,7 @@ func Test_explodeRefs(t *testing.T) {
 		defer httpmock.DeactivateAndReset()
 		httpmock.RegisterResponder("GET", "https://example.com",
 			httpmock.NewStringResponder(200, "The quick brown fox jumped over the lazy dog"))
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		p.OpenAPI.Tags = []TagDefinition{{Name: "Foo", Description: &ReffableString{Value: "$ref:https://example.com"}}}
 
@@ -255,7 +255,7 @@ func Test_explodeRefs(t *testing.T) {
 		defer httpmock.DeactivateAndReset()
 		httpmock.RegisterResponder("GET", "https://example.com",
 			httpmock.NewStringResponder(200, "The quick brown fox jumped over the lazy dog"))
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 		p.OpenAPI.Tags = []TagDefinition{{Name: "Foo", Description: &ReffableString{Value: "$ref:https://example.com"}}, {Name: "Bar", Description: &ReffableString{Value: "Baz"}}}
 
@@ -278,7 +278,7 @@ func Test_fetchRef(t *testing.T) {
 
 func Test_descriptions(t *testing.T) {
 	t.Run("Description unchanged when not a ref", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 
 		operation := &OperationObject{
@@ -288,7 +288,7 @@ func Test_descriptions(t *testing.T) {
 		err = p.parseDescription(operation, "testing")
 		require.NoError(t, err)
 
-		require.Equal(t, " testing", operation.Description)
+		require.Equal(t, "testing", operation.Description)
 	})
 
 	t.Run("Description inline when a ref", func(t *testing.T) {
@@ -297,7 +297,7 @@ func Test_descriptions(t *testing.T) {
 		httpmock.RegisterResponder("GET", "https://example.com",
 			httpmock.NewStringResponder(200, "The quick brown fox jumped over the lazy dog"))
 
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 
 		operation := &OperationObject{
@@ -307,7 +307,7 @@ func Test_descriptions(t *testing.T) {
 		err = p.parseDescription(operation, "$ref:https://example.com")
 		require.NoError(t, err)
 
-		require.Equal(t, " The quick brown fox jumped over the lazy dog", operation.Description)
+		require.Equal(t, "The quick brown fox jumped over the lazy dog", operation.Description)
 	})
 }
 
@@ -332,9 +332,44 @@ func Test_parseRequestBodyExample(t *testing.T) {
 	})
 }
 
+func Test_genSchemaObjectID(t *testing.T) {
+	t.Run("empty package name", func(t *testing.T) {
+		p, err := newParser("example/", "example/main.go", "", false, false)
+		require.NoError(t, err)
+
+		result := p.genSchemaObjectID("", "sample")
+
+		require.Equal(t, "sample", string(result))
+	})
+	t.Run("simple package name", func(t *testing.T) {
+		p, err := newParser("example/", "example/main.go", "", false, false)
+		require.NoError(t, err)
+
+		result := p.genSchemaObjectID("sample", "sample")
+
+		require.Equal(t, "sample.sample", string(result))
+	})
+	t.Run("multidepth package name", func(t *testing.T) {
+		p, err := newParser("example/", "example/main.go", "", false, false)
+		require.NoError(t, err)
+
+		result := p.genSchemaObjectID("test.sample", "sample")
+
+		require.Equal(t, "test.sample.sample", string(result))
+	})
+	t.Run("omit package name", func(t *testing.T) {
+		p, err := newParser("example/", "example/main.go", "", false, true)
+		require.NoError(t, err)
+
+		result := p.genSchemaObjectID("test.sample", "sample")
+
+		require.Equal(t, "sample", string(result))
+	})
+}
+
 func Test_parseOperationTags(t *testing.T) {
 	t.Run("Parses operation tags", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 
 		p.OpenAPI.Tags = append(p.OpenAPI.Tags, TagDefinition{Name: "foo", Description: &ReffableString{Value: "bar"}})
@@ -346,7 +381,7 @@ func Test_parseOperationTags(t *testing.T) {
 	})
 
 	t.Run("Errors when tag in operation is not in list of tags", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false)
+		p, err := newParser("example/", "example/main.go", "", false, false)
 		require.NoError(t, err)
 
 		p.OpenAPI.Tags = append(p.OpenAPI.Tags, TagDefinition{Name: "foo", Description: &ReffableString{Value: "bar"}})
