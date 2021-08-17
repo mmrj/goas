@@ -1571,14 +1571,11 @@ func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObje
 				nestedType := p.getTypeAsString(splitType[1])
 				setNestedFieldSchemaProps(splitType[0], nestedType, fieldSchema, structSchema)
 			} else {
-				fieldSchemaObjectID, err := p.registerType(pkgPath, pkgName, typeAsString)
+				_, err := p.registerType(pkgPath, pkgName, typeAsString)
 				fieldSchema, err = p.parseSchemaObject(pkgPath, pkgName, typeAsString, true)
 				if err != nil {
 					p.debug(err)
 					return
-				}
-				if fieldSchemaObjectID != "" {
-					structSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
 				}
 			}
 		} else {
