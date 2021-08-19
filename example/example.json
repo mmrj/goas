@@ -320,6 +320,16 @@
           },
           "Required": {
             "type": "boolean"
+          },
+          "arrayEnum": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "example1",
+                "example2"
+              ]
+            }
           }
         }
       },

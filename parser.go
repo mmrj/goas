@@ -1715,7 +1715,11 @@ func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchem
 			parseTagValue := strings.Split(v, "=")
 			if len(parseTagValue) > 0 {
 				if parseTagValue[0] == "enum" {
-					fieldSchema.Enum = strings.Split(parseTagValue[1], " ")
+					if fieldSchema.Type != nil && *fieldSchema.Type == "array" {
+						fieldSchema.Items.Enum = strings.Split(parseTagValue[1], " ")
+					} else {
+						fieldSchema.Enum = strings.Split(parseTagValue[1], " ")
+					}
 				}
 			}
 		}
