@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"go/ast"
 	"io/ioutil"
 	"testing"
@@ -20,8 +19,6 @@ func TestExample(t *testing.T) {
 
 	bts, err := json.MarshalIndent(p.OpenAPI, "", "    ")
 	require.NoError(t, err)
-
-	fmt.Println(string(bts))
 
 	expected, _ := ioutil.ReadFile("./example/example.json")
 	require.JSONEq(t, string(expected), string(bts))
@@ -390,5 +387,31 @@ func Test_parseOperationTags(t *testing.T) {
 		comment = append(comment, &ast.Comment{Slash: 0, Text: "// @Tag Foo"})
 		err = p.parseOperation(p.ModulePath, "", comment)
 		require.Error(t, err)
+	})
+}
+
+func Test_validateSchemaNames(t *testing.T) {
+	t.Run("Returns no conflicts", func(t *testing.T) {
+		p, err := newParser("example/", "example/main.go", "", false, false)
+		require.NoError(t, err)
+
+		conflicts := p.validateSchemaNames()
+
+		require.Empty(t, conflicts)
+	})
+
+	t.Run("Returns conflicts", func(t *testing.T) {
+		p, err := newParser("example/", "example/main.go", "", false, false)
+		require.NoError(t, err)
+		p.ApiSchemaNames["pkg/foo/bar"] = map[string]string{}
+		p.ApiSchemaNames["pkg/foo/bar"]["BarRecord"] = "Record"
+		p.ApiSchemaNames["pkg/baz/qux"] = map[string]string{}
+		p.ApiSchemaNames["pkg/baz/qux"]["QuxRecord"] = "Record"
+
+		conflicts := p.validateSchemaNames()
+
+		require.Len(t, conflicts, 1)
+		require.Contains(t, conflicts[0], "pkg/foo/bar#BarRecord")
+		require.Contains(t, conflicts[0], "pkg/baz/qux#QuxRecord")
 	})
 }

@@ -259,9 +259,14 @@ func (p *parser) CreateOASFile(path string) error {
 		return err
 	}
 
+	conflicts := p.validateSchemaNames()
+	if len(conflicts) > 0 {
+		return fmt.Errorf("conflicting schema names - %s", strings.Join(conflicts, ", "))
+	}
+
 	fd, err := os.Create(path)
 	if err != nil {
-		return fmt.Errorf("Can not create the file %s: %v", path, err)
+		return fmt.Errorf("can not create the file %s: %v", path, err)
 	}
 	defer fd.Close()
 
@@ -279,6 +284,22 @@ func (p *parser) CreateOASFile(path string) error {
 	_, err = fd.WriteString(string(output))
 
 	return err
+}
+
+func (p *parser) validateSchemaNames() []string {
+	potentialConflictsMap := map[string][]string{}
+	for pkgName, schemaNames := range p.ApiSchemaNames {
+		for typeName, schemaName := range schemaNames {
+			potentialConflictsMap[schemaName] = append(potentialConflictsMap[schemaName], pkgName+"#"+typeName)
+		}
+	}
+	conflicts := []string{}
+	for schemaName := range potentialConflictsMap {
+		if len(potentialConflictsMap[schemaName]) > 1 {
+			conflicts = append(conflicts, schemaName+": "+strings.Join(potentialConflictsMap[schemaName], " | "))
+		}
+	}
+	return conflicts
 }
 
 func (p *parser) explodeRefs() error {
@@ -1535,6 +1556,18 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 		_, ok := p.OpenAPI.Components.Schemas[replaceBackslash(registerTypeName)]
 		if !ok {
 			p.OpenAPI.Components.Schemas[replaceBackslash(registerTypeName)] = &schemaObject
+			// also track in our map of pkg -> type -> schemaId
+			if _, ok = p.ApiSchemaNames[pkgName]; !ok {
+				p.ApiSchemaNames[pkgName] = map[string]string{}
+			}
+			typeNameWithoutPackage := typeNameParts[len(typeNameParts)-1]
+			if schemaName, ok := p.ApiSchemaNames[pkgName][typeNameWithoutPackage]; ok {
+				if schemaName != schemaObject.ID {
+					return nil, fmt.Errorf("different schema object id for type %s#%s: %s vs %s", pkgName, typeNameWithoutPackage, schemaObject.ID, schemaName)
+				}
+			} else {
+				p.ApiSchemaNames[pkgName][typeNameWithoutPackage] = schemaObject.ID
+			}
 		}
 	}
 
