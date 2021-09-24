@@ -150,3 +150,12 @@ func getFoosSpacesInTag() {
 func getBirds() {
 
 }
+
+// @Title Hidden Route
+// @OperationId getHiddenRoutes
+// @Route /api/v2/showHidden [get]
+// @Success 200 object Bird "Success"
+// @Hidden
+func getHidden() {
+
+}

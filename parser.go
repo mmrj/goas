@@ -56,6 +56,7 @@ type parser struct {
 
 	Debug        bool
 	OmitPackages bool
+	ShowHidden   bool
 }
 
 type pkg struct {
@@ -69,7 +70,7 @@ var (
 	arrayType  = "array"
 )
 
-func newParser(modulePath, mainFilePath, handlerPath string, debug bool, omitPackages bool) (*parser, error) {
+func newParser(modulePath, mainFilePath, handlerPath string, debug, omitPackages, showHidden bool) (*parser, error) {
 	p := &parser{
 		CorePkgs:                map[string]bool{},
 		KnownPkgs:               []pkg{},
@@ -81,6 +82,7 @@ func newParser(modulePath, mainFilePath, handlerPath string, debug bool, omitPac
 		PkgNameImportedPkgAlias: map[string]map[string][]string{},
 		Debug:                   debug,
 		OmitPackages:            omitPackages,
+		ShowHidden:              showHidden,
 	}
 	p.OpenAPI.OpenAPI = OpenAPIVersion
 	p.OpenAPI.Paths = make(PathsObject)
@@ -867,7 +869,7 @@ func (p *parser) parsePaths() error {
 	return nil
 }
 
-func isHidden(astComments []*ast.Comment) bool {
+func isHidden(astComments []*ast.Comment, showHidden bool) bool {
 	for _, astComment := range astComments {
 		comment := strings.TrimSpace(strings.TrimLeft(astComment.Text, "/"))
 		if len(comment) == 0 {
@@ -875,7 +877,7 @@ func isHidden(astComments []*ast.Comment) bool {
 			continue
 		}
 		attribute := strings.Fields(comment)[0]
-		if strings.ToLower(attribute) == "@hidden" {
+		if strings.ToLower(attribute) == "@hidden" && !showHidden {
 			return true
 		}
 	}
@@ -893,7 +895,7 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 	} else if p.HandlerPath != "" && !strings.HasPrefix(pkgPath, p.HandlerPath) {
 		return nil
 	}
-	if isHidden(astComments) {
+	if isHidden(astComments, p.ShowHidden) {
 		return nil
 	}
 	var err error
@@ -927,7 +929,7 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 				resource = "others"
 			}
 
-			if !isInStringList(tagList, resource) {
+			if !isInStringList(tagList, resource) && !p.ShowHidden {
 				err = fmt.Errorf("Could not find tag \"%s\" in the main list of tags", resource)
 			} else if !isInStringList(operation.Tags, resource) {
 				operation.Tags = append(operation.Tags, resource)

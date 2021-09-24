@@ -1,0 +1,508 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "LaunchDarkly REST API",
+    "description": "Build custom integrations with the LaunchDarkly REST API",
+    "contact": {
+      "name": "LaunchDarkly Technical Support Team",
+      "url": "https://support.launchdarkly.com",
+      "email": "support@launchdarkly.com"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0"
+    },
+    "version": "2.0"
+  },
+  "servers": [
+    {
+      "url": "https://app.launchdarkly.com"
+    }
+  ],
+  "paths": {
+    "/api/v2/birds": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Birb"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Get all birds",
+        "operationId": "getBirds"
+      }
+    },
+    "/api/v2/foo": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Successful foo response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FooResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid access token"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Invalid resource identifier"
+          }
+        },
+        "tags": [
+          "Foo"
+        ],
+        "summary": "Get all foos",
+        "description": "Get all foos",
+        "operationId": "getAllFoos"
+      },
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Successful foo response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FooResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid access token"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Invalid resource identifier"
+          }
+        },
+        "summary": "Post foo",
+        "description": "Post a foo",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FooBody"
+              }
+            }
+          },
+          "required": true
+        }
+      },
+      "put": {
+        "responses": {
+          "200": {
+            "description": "Successful foo response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FooResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid access token"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Invalid resource identifier"
+          }
+        },
+        "summary": "Put foo",
+        "description": "Overwrite a foo"
+      }
+    },
+    "/api/v2/foo-spaces": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Successful foo response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FooResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid access token"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Invalid resource identifier"
+          }
+        },
+        "tags": [
+          "Foo With Spaces"
+        ],
+        "summary": "Get foos with spaces",
+        "description": "Get foos with spaces",
+        "operationId": "getFoosWithSpaces"
+      }
+    },
+    "/api/v2/foo/{id}": {
+      "patch": {
+        "responses": {
+          "204": {
+            "description": "No content"
+          },
+          "401": {
+            "description": "Invalid access token"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Invalid resource identifier"
+          }
+        },
+        "summary": "Update foo",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Foo id",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "string",
+              "description": "Foo id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/FooPatchOperationSet"
+                  },
+                  {
+                    "$ref": "#/components/schemas/FooMergePatch"
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "operationId": "patchFoo"
+      }
+    },
+    "/api/v2/foo/{id}/inner": {
+      "put": {
+        "responses": {
+          "200": {
+            "description": "Successful innerfoo response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InnerFoo"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid access token"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Invalid resource identifier"
+          }
+        },
+        "summary": "Get inner foos",
+        "description": "Get Inner Foos"
+      }
+    },
+    "/api/v2/showHidden": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Birb"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Hidden Route",
+        "operationId": "getHiddenRoutes"
+      }
+    },
+    "/api/v2/vfoo": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Successful foo response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FooResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid access token"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Invalid resource identifier"
+          }
+        },
+        "tags": [
+          "Vfoo"
+        ],
+        "summary": "Get Foo as var",
+        "description": "get a foo var"
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Animal": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "Birb": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "airspeedVelocity": {
+            "type": "number"
+          }
+        }
+      },
+      "BsonID": {
+        "type": "string"
+      },
+      "DoubleAlias": {
+        "$ref": "#/components/schemas/JsonMap"
+      },
+      "Environment": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "FooBody": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "Example": {
+            "$ref": "#/components/schemas/DoubleAlias"
+          },
+          "Required": {
+            "type": "boolean"
+          },
+          "arrayEnum": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "example1",
+                "example2"
+              ]
+            }
+          }
+        }
+      },
+      "FooMergePatch": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "FooPatchOperation": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          }
+        }
+      },
+      "FooPatchOperationSet": {
+        "type": "object",
+        "properties": {
+          "operations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FooPatchOperation"
+            }
+          }
+        }
+      },
+      "FooResponse": {
+        "type": "object",
+        "properties": {
+          "bsonId": {
+            "$ref": "#/components/schemas/BsonID"
+          },
+          "id": {
+            "type": "string"
+          },
+          "startDate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endDate": {
+            "$ref": "#/components/schemas/UnixMillis"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int64",
+            "example": 6
+          },
+          "msg": {},
+          "foo": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InnerFoo"
+            }
+          },
+          "environments": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/Environment"
+            }
+          },
+          "freeForm": {},
+          "jsonMap": {
+            "$ref": "#/components/schemas/JsonMap"
+          },
+          "doubleAlias": {
+            "$ref": "#/components/schemas/DoubleAlias"
+          },
+          "interfaceBlah": {
+            "$ref": "#/components/schemas/InterfaceResponse"
+          },
+          "instruction": {
+            "$ref": "#/components/schemas/Instruction"
+          },
+          "bsonPtr": {
+            "example": "blah blah blah",
+            "$ref": "#/components/schemas/BsonID"
+          },
+          "randomBool": {
+            "type": "boolean",
+            "example": true
+          },
+          "myEnum": {
+            "type": "string",
+            "enum": [
+              "value1",
+              "value2"
+            ]
+          }
+        }
+      },
+      "InnerFoo": {
+        "type": "object",
+        "properties": {
+          "a": {
+            "type": "string"
+          },
+          "b": {
+            "type": "string"
+          }
+        }
+      },
+      "Instruction": {
+        "type": "object",
+        "additionalProperties": {}
+      },
+      "InterfaceResponse": {},
+      "JsonMap": {
+        "type": "object",
+        "additionalProperties": {}
+      },
+      "UnixMillis": {
+        "type": "integer",
+        "format": "int64"
+      }
+    },
+    "securitySchemes": {
+      "ApiKey": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization"
+      }
+    }
+  },
+  "security": [
+    {
+      "ApiKey": [
+        "read",
+        "write"
+      ]
+    }
+  ],
+  "tags": [
+    {
+      "name": "Foo"
+    },
+    {
+      "name": "Bar",
+      "description": "Baz"
+    },
+    {
+      "name": "Vfoo"
+    },
+    {
+      "name": "Foo With Spaces"
+    }
+  ]
+}

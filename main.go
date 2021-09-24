@@ -38,10 +38,14 @@ var flags = []cli.Flag{
 		Name:  "omit-packages",
 		Usage: "Omit packages from schema names. An error will be thrown if there is a conflict.",
 	},
+	cli.BoolFlag{
+		Name:  "show-hidden",
+		Usage: "Generate schema even for paths that are marked as hidden packages",
+	},
 }
 
 func action(c *cli.Context) error {
-	p, err := newParser(c.GlobalString("module-path"), c.GlobalString("main-file-path"), c.GlobalString("handler-path"), c.GlobalBool("debug"), c.GlobalBool("omit-packages"))
+	p, err := newParser(c.GlobalString("module-path"), c.GlobalString("main-file-path"), c.GlobalString("handler-path"), c.GlobalBool("debug"), c.GlobalBool("omit-packages"), c.GlobalBool("show-hidden"))
 	if err != nil {
 		return err
 	}
