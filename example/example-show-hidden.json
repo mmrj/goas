@@ -336,7 +336,7 @@
           "Example": {
             "$ref": "#/components/schemas/DoubleAlias"
           },
-          "Required": {
+          "required": {
             "type": "boolean"
           },
           "arrayEnum": {
