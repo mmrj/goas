@@ -1346,7 +1346,6 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 	var typeSpec *ast.TypeSpec
 	var exist bool
 	var schemaObject SchemaObject
-	var err error
 
 	// handler basic and some specific typeName
 	if strings.HasPrefix(typeName, "[]") {
@@ -1357,10 +1356,18 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 			schemaObject.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(schema.ID)}
 			return &schemaObject, nil
 		}
-		schemaObject.Items, err = p.parseSchemaObject(pkgPath, pkgName, itemTypeName, true)
+
+		newParsedSchema, err := p.parseSchemaObject(pkgPath, pkgName, itemTypeName, true)
 		if err != nil {
 			return nil, err
 		}
+
+		if newParsedSchema.ID != "" {
+			schemaObject.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(newParsedSchema.ID)}
+			return &schemaObject, nil
+		}
+
+		schemaObject.Items = newParsedSchema
 		return &schemaObject, nil
 	} else if strings.HasPrefix(typeName, "map[]") {
 		schemaObject.Type = &objectType
