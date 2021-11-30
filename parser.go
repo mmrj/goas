@@ -1604,6 +1604,10 @@ func (p *parser) parseAstFields(pkgPath, pkgName string, structSchema *SchemaObj
 func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObject, astField *ast.Field) {
 	fieldSchema := &SchemaObject{}
 	typeAsString := p.getTypeAsString(astField.Type)
+	if renderedStruct := parseOverrideStructTag(astField); renderedStruct != "" {
+		typeAsString = renderedStruct
+	}
+
 	isSliceOrMap := strings.HasPrefix(typeAsString, "[]") || strings.HasPrefix(typeAsString, "map[]")
 	isInterface := strings.HasPrefix(typeAsString, "interface{}")
 	if isSliceOrMap || isInterface || typeAsString == "time.Time" {
@@ -1737,6 +1741,16 @@ func (p *parser) getTypeAsString(fieldType interface{}) string {
 	}
 
 	return fmt.Sprint(fieldType)
+}
+
+func parseOverrideStructTag(astField *ast.Field) (renderedStructName string) {
+	if astField.Tag != nil {
+		astFieldTag := reflect.StructTag(strings.Trim(astField.Tag.Value, "`"))
+		if renderedStructName := astFieldTag.Get("renderedStruct"); renderedStructName != "" {
+			return renderedStructName
+		}
+	}
+	return renderedStructName
 }
 
 func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchema *SchemaObject, name string) (newName string, skip bool) {
