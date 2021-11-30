@@ -32,6 +32,7 @@ type FooResponse struct {
 	BsonPtr       *BsonID                `json:"bsonPtr,omitempty" example:"blah blah blah"`
 	RandomBool    bool                   `json:"randomBool,omitempty" example:"true"`
 	MyEnum        string                 `json:"myEnum" goas:"enum=value1 value2"`
+	ChangeReturn  string                 `json:"changeReturn" overrideApiSchemaType:"Instruction"`
 }
 
 type FooBody struct {
@@ -43,7 +44,6 @@ type FooBody struct {
 type Environment struct {
 	Name string `json:"name"`
 }
-
 type FooPatchOperation struct {
 	op    string
 	path  string
