@@ -1746,7 +1746,6 @@ func (p *parser) getTypeAsString(fieldType interface{}) string {
 func parseOverrideStructTag(astField *ast.Field) (renderedStructName string) {
 	if astField.Tag != nil {
 		astFieldTag := reflect.StructTag(strings.Trim(astField.Tag.Value, "`"))
-		fmt.Println(astFieldTag)
 		if renderedStructName := astFieldTag.Get("overrideApiSchemaType"); renderedStructName != "" {
 			return renderedStructName
 		}
