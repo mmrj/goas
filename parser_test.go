@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"go/ast"
+	"go/token"
 	"io/ioutil"
 	"testing"
 
@@ -430,5 +431,22 @@ func Test_validateSchemaNames(t *testing.T) {
 		require.Len(t, conflicts, 1)
 		require.Contains(t, conflicts[0], "pkg/foo/bar#BarRecord")
 		require.Contains(t, conflicts[0], "pkg/baz/qux#QuxRecord")
+	})
+}
+
+func Test_parseOverrideStructTag(t *testing.T) {
+	t.Run("found tag", func(t *testing.T) {
+		ast := &ast.Field{
+			Doc:   nil,
+			Names: nil,
+			Type:  nil,
+			Tag: &ast.BasicLit{
+				ValuePos: 0,
+				Kind:     token.STRING,
+				Value:    `overrideApiSchemaType:"Test"`},
+		}
+		result := parseOverrideStructTag(ast)
+
+		require.Equal(t, "Test", result)
 	})
 }

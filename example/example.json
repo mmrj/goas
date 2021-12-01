@@ -428,6 +428,9 @@
               "value1",
               "value2"
             ]
+          },
+          "changeReturn": {
+            "$ref": "#/components/schemas/Instruction"
           }
         }
       },
