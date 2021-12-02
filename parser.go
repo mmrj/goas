@@ -53,6 +53,7 @@ type parser struct {
 
 	// map of package name to type name to schema name
 	ApiSchemaNames map[string]map[string]string
+	AllowTypeMerge []string
 
 	Debug        bool
 	OmitPackages bool
@@ -296,8 +297,16 @@ func (p *parser) validateSchemaNames() []string {
 		}
 	}
 	conflicts := []string{}
+
+SchemaCheck:
 	for schemaName := range potentialConflictsMap {
 		if len(potentialConflictsMap[schemaName]) > 1 {
+			for _, allowMerge := range p.AllowTypeMerge {
+				if schemaName == allowMerge {
+					continue SchemaCheck
+				}
+			}
+
 			conflicts = append(conflicts, schemaName+": "+strings.Join(potentialConflictsMap[schemaName], " | "))
 		}
 	}
@@ -375,6 +384,9 @@ func (p *parser) parseEntryPoint() error {
 				}
 				// p.debug(attribute, value)
 				switch attribute {
+
+				case "@allowtypemerge":
+					p.AllowTypeMerge = strings.Split(value, " ")
 				case "@version":
 					p.OpenAPI.Info.Version = value
 				case "@title":
