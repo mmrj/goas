@@ -384,7 +384,6 @@ func (p *parser) parseEntryPoint() error {
 				}
 				// p.debug(attribute, value)
 				switch attribute {
-
 				case "@allowtypemerge":
 					p.AllowTypeMerge = strings.Split(value, " ")
 				case "@version":
