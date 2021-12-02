@@ -12,7 +12,7 @@ import (
 )
 
 func setupParser() (*parser, error) {
-	return newParser("example/", "example/main.go", "", false, false, false)
+	return newParser("example/", "example/main.go", "", "", false, false, false)
 }
 func TestExample(t *testing.T) {
 	p, err := setupParser()
@@ -29,7 +29,7 @@ func TestExample(t *testing.T) {
 }
 
 func TestShowHiddenExample(t *testing.T) {
-	p, err := newParser("example/", "example/main.go", "", false, false, true)
+	p, err := newParser("example/", "example/main.go", "", "", false, false, true)
 	require.NoError(t, err)
 
 	err = p.parse()
@@ -284,7 +284,7 @@ func Test_explodeRefs(t *testing.T) {
 
 func Test_fetchRef(t *testing.T) {
 	t.Run("fetches local file ref", func(t *testing.T) {
-		desc, err := fetchRef("$ref:file://example/example.md")
+		desc, err := fetchRef(".", "$ref:file://example/example.md")
 		require.NoError(t, err)
 
 		require.Equal(t, "Example description", desc)
@@ -373,7 +373,7 @@ func Test_genSchemaObjectID(t *testing.T) {
 		require.Equal(t, "test.sample.sample", string(result))
 	})
 	t.Run("omit package name", func(t *testing.T) {
-		p, err := newParser("example/", "example/main.go", "", false, true, false)
+		p, err := newParser("example/", "example/main.go", "", "", false, true, false)
 		require.NoError(t, err)
 
 		result := p.genSchemaObjectID("test.sample", "sample")
