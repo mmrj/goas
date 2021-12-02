@@ -27,7 +27,7 @@ var flags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:  "file-ref-path",
-		Value: "",
+		Value: ".",
 		Usage: "path to start looking for file refs",
 	},
 	cli.StringFlag{
