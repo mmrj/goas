@@ -57,6 +57,7 @@ type parser struct {
 	Debug        bool
 	OmitPackages bool
 	ShowHidden   bool
+	FileRefPath  string
 }
 
 type pkg struct {
@@ -70,7 +71,7 @@ var (
 	arrayType  = "array"
 )
 
-func newParser(modulePath, mainFilePath, handlerPath string, debug, omitPackages, showHidden bool) (*parser, error) {
+func newParser(modulePath, mainFilePath, handlerPath, descriptionRefPath string, debug, omitPackages, showHidden bool) (*parser, error) {
 	p := &parser{
 		CorePkgs:                map[string]bool{},
 		KnownPkgs:               []pkg{},
@@ -83,6 +84,7 @@ func newParser(modulePath, mainFilePath, handlerPath string, debug, omitPackages
 		Debug:                   debug,
 		OmitPackages:            omitPackages,
 		ShowHidden:              showHidden,
+		FileRefPath:             descriptionRefPath,
 	}
 	p.OpenAPI.OpenAPI = OpenAPIVersion
 	p.OpenAPI.Paths = make(PathsObject)
@@ -306,7 +308,7 @@ func (p *parser) validateSchemaNames() []string {
 
 func (p *parser) explodeRefs() error {
 	if p.OpenAPI.Info.Description != nil {
-		desc, err := fetchRef(p.OpenAPI.Info.Description.Value)
+		desc, err := fetchRef(p.FileRefPath, p.OpenAPI.Info.Description.Value)
 		if err != nil {
 			return err
 		}
@@ -316,7 +318,7 @@ func (p *parser) explodeRefs() error {
 		if tag.Description == nil {
 			continue
 		}
-		desc, err := fetchRef(tag.Description.Value)
+		desc, err := fetchRef(p.FileRefPath, tag.Description.Value)
 		if err != nil {
 			return err
 		}
@@ -326,13 +328,14 @@ func (p *parser) explodeRefs() error {
 	return nil
 }
 
-func fetchRef(description string) (string, error) {
+func fetchRef(filePath, description string) (string, error) {
 	if !strings.HasPrefix(description, "$ref:") {
 		return description, nil
 	}
 	url := description[5:]
 	if strings.HasPrefix(url, "file://") {
-		dat, err := ioutil.ReadFile(url[7:])
+		descPath := strings.Join([]string{filePath, url[7:]}, "/")
+		dat, err := ioutil.ReadFile(descPath)
 		if err != nil {
 			return "", err
 		}
@@ -945,7 +948,7 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 }
 
 func (p *parser) parseDescription(operation *OperationObject, description string) error {
-	desc, err := fetchRef(description)
+	desc, err := fetchRef(p.FileRefPath, description)
 	if err != nil {
 		return err
 	}
