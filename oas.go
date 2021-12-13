@@ -43,7 +43,7 @@ type InfoObject struct {
 	Contact        *ContactObject             `json:"contact,omitempty"`
 	License        *LicenseObject             `json:"license,omitempty"`
 	Version        string                     `json:"version"`
-	CliGroups      map[string]CliConfigObject `json:"x-cli-groups,omitempty`
+	CliGroups      map[string]CliConfigObject `json:"x-cli-groups,omitempty"`
 }
 
 // Wrapper for a string that may be of the form `$ref:foo`
