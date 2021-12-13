@@ -37,12 +37,13 @@ type ServerObject struct {
 }
 
 type InfoObject struct {
-	Title          string          `json:"title"`
-	Description    *ReffableString `json:"description,omitempty"`
-	TermsOfService string          `json:"termsOfService,omitempty"`
-	Contact        *ContactObject  `json:"contact,omitempty"`
-	License        *LicenseObject  `json:"license,omitempty"`
-	Version        string          `json:"version"`
+	Title          string                     `json:"title"`
+	Description    *ReffableString            `json:"description,omitempty"`
+	TermsOfService string                     `json:"termsOfService,omitempty"`
+	Contact        *ContactObject             `json:"contact,omitempty"`
+	License        *LicenseObject             `json:"license,omitempty"`
+	Version        string                     `json:"version"`
+	CliGroups      map[string]CliConfigObject `json:"x-cli-groups,omitempty`
 }
 
 // Wrapper for a string that may be of the form `$ref:foo`
@@ -105,6 +106,11 @@ type OperationObject struct {
 	Parameters  []ParameterObject  `json:"parameters,omitempty"`
 	RequestBody *RequestBodyObject `json:"requestBody,omitempty"`
 	OperationID string             `json:"operationId,omitempty"`
+	// CLI Generation parameters
+	CliIgnore  bool     `json:"x-cli-ignore,omitempty`
+	CliGroup   string   `json:"x-cli-group,omitempty"`
+	CliAliases []string `json:"x-cli-aliases,omitempty"`
+
 	// Tags
 	// ExternalDocs
 	// OperationID
@@ -296,4 +302,8 @@ type SecuritySchemeOauthFlowObject struct {
 type TagDefinition struct {
 	Name        string          `json:"name"`
 	Description *ReffableString `json:"description,omitempty"`
+}
+
+type CliConfigObject struct {
+	Aliases []string `json:"aliases,omitempty"`
 }
