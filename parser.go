@@ -501,6 +501,12 @@ func (p *parser) parseEntryPoint() error {
 						return err
 					}
 					p.PackageAliases[originalName] = newName
+				case "@cligroups":
+					command, cfg, err := parseCliGroups(comment)
+					if err != nil {
+						return err
+					}
+					p.OpenAPI.Info.CliGroups[*command] = *cfg
 				}
 			}
 		}
@@ -556,6 +562,23 @@ func parseTags(comment string) (*TagDefinition, error) {
 	}
 
 	return &tag, nil
+}
+
+func parseCliGroups(comment string) (*string, *CliConfigObject, error) {
+	re := regexp.MustCompile(`[\w\-]+(\s+([\w]+:([\w\-]+((,[\w\-]+)+)?)))?`)
+	matches := re.FindAllStringSubmatch(comment, -1)
+	if len(matches) == 0 || len(matches) > 2 {
+		return nil, nil, fmt.Errorf("Expected: @CliGroups <command> (optional) aliases:<alias1,alias2,etc> Received: %s", comment)
+	}
+	command := matches[0][0]
+	if len(matches[0]) == 2 {
+		aliases := strings.Split(matches[0][1], ",")
+		cfg := CliConfigObject{
+			Aliases: aliases,
+		}
+		return &command, &cfg, nil
+	}
+	return &command, nil, nil
 }
 
 func (p *parser) parseModule() error {
