@@ -962,6 +962,12 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 			}
 		case "@route", "@router":
 			err = p.parseRouteComment(operation, comment)
+		case "@cligroup":
+			operation.CliGroup = value
+		case "@clialiases":
+			p.parseCliOperationAliases(operation, value)
+		case "@cliignore":
+			operation.CliIgnore = true
 		}
 		if err != nil {
 			return err
@@ -1214,6 +1220,13 @@ func (p *parser) parseResponseComment(pkgPath, pkgName string, operation *Operat
 	operation.Responses[status] = responseObject
 
 	return nil
+}
+
+func (p *parser) parseCliOperationAliases(operation *OperationObject, value string) {
+	aliases := strings.Split(value, ",")
+	for _, alias := range aliases {
+		operation.CliOperationAliases = append(operation.CliOperationAliases, strings.TrimSpace(alias))
+	}
 }
 
 func (p *parser) routeAndMethodExist(route string, method string) bool {

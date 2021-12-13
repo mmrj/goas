@@ -107,9 +107,9 @@ type OperationObject struct {
 	RequestBody *RequestBodyObject `json:"requestBody,omitempty"`
 	OperationID string             `json:"operationId,omitempty"`
 	// CLI Generation parameters
-	CliIgnore  bool     `json:"x-cli-ignore,omitempty`
-	CliGroup   string   `json:"x-cli-group,omitempty"`
-	CliAliases []string `json:"x-cli-aliases,omitempty"`
+	CliIgnore           bool     `json:"x-cli-ignore,omitempty`
+	CliGroup            string   `json:"x-cli-group,omitempty"`
+	CliOperationAliases []string `json:"x-cli-aliases,omitempty"`
 
 	// Tags
 	// ExternalDocs
