@@ -91,6 +91,7 @@ func newParser(modulePath, mainFilePath, handlerPath, descriptionRefPath string,
 	p.OpenAPI.Security = []map[string][]string{}
 	p.OpenAPI.Components.Schemas = make(map[string]*SchemaObject)
 	p.OpenAPI.Components.SecuritySchemes = map[string]*SecuritySchemeObject{}
+	p.OpenAPI.Info.CliGroups = make(map[string]CliConfigObject)
 
 	// check modulePath is exist
 	modulePath, _ = filepath.Abs(modulePath)
@@ -378,6 +379,8 @@ func (p *parser) parseEntryPoint() error {
 				}
 				// p.debug(attribute, value)
 				switch attribute {
+				case "@cligroups":
+					p.parseCliGroups(value)
 				case "@version":
 					p.OpenAPI.Info.Version = value
 				case "@title":
@@ -532,6 +535,31 @@ func (p *parser) parseEntryPoint() error {
 	}
 
 	return nil
+}
+
+func (p *parser) parseCliGroups(comment string) {
+
+	r, _ := regexp.Compile(`(?P<name>[[:word:]-]+)((?:[[:space:]]+)(?:aliases:)(?P<aliases>.*))?`)
+
+	matches := r.FindStringSubmatch(comment)
+	names := r.SubexpNames()
+
+	var name string
+	var aliases []string
+
+	for i, match := range matches {
+
+		if names[i] == "name" {
+			name = match
+		}
+		if names[i] == "aliases" && match != "" {
+			aliases = strings.Split(match, ",")
+		}
+	}
+
+	p.OpenAPI.Info.CliGroups[name] = CliConfigObject{
+		Aliases: aliases,
+	}
 }
 
 func parsePackageAliases(comment string) (string, string, error) {
@@ -916,6 +944,14 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 		attribute := strings.Fields(comment)[0]
 		value := strings.TrimSpace(comment[len(attribute):])
 		switch strings.ToLower(attribute) {
+		case "@cligroup":
+			operation.CliGroup = value
+		case "@cliignore":
+			operation.CliIgnore = true
+		case "@cliname":
+			operation.CliName = value
+		case "@clialias":
+			operation.CliAlias = strings.Split(value, ",")
 		case "@title":
 			operation.Summary = value
 		case "@description":

@@ -37,12 +37,17 @@ type ServerObject struct {
 }
 
 type InfoObject struct {
-	Title          string          `json:"title"`
-	Description    *ReffableString `json:"description,omitempty"`
-	TermsOfService string          `json:"termsOfService,omitempty"`
-	Contact        *ContactObject  `json:"contact,omitempty"`
-	License        *LicenseObject  `json:"license,omitempty"`
-	Version        string          `json:"version"`
+	Title          string                     `json:"title"`
+	Description    *ReffableString            `json:"description,omitempty"`
+	TermsOfService string                     `json:"termsOfService,omitempty"`
+	Contact        *ContactObject             `json:"contact,omitempty"`
+	License        *LicenseObject             `json:"license,omitempty"`
+	Version        string                     `json:"version"`
+	CliGroups      map[string]CliConfigObject `json:"x-cli-groups,omitempty"`
+}
+
+type CliConfigObject struct {
+	Aliases []string `json:"aliases,omitempty"`
 }
 
 // Wrapper for a string that may be of the form `$ref:foo`
@@ -97,14 +102,18 @@ type PathItemObject struct {
 }
 
 type OperationObject struct {
-	Responses ResponsesObject `json:"responses"` // Required
-
+	Responses   ResponsesObject    `json:"responses"` // Required
 	Tags        []string           `json:"tags,omitempty"`
 	Summary     string             `json:"summary,omitempty"`
 	Description string             `json:"description,omitempty"`
 	Parameters  []ParameterObject  `json:"parameters,omitempty"`
 	RequestBody *RequestBodyObject `json:"requestBody,omitempty"`
 	OperationID string             `json:"operationId,omitempty"`
+	CliIgnore   bool               `json:"x-cli-ignore,omitempty"`
+	CliGroup    string             `json:"x-cli-group,omitempty"`
+	CliName     string             `json:"x-cli-name,omitempty"`
+	CliAlias    []string           `json:"x-cli-aliases,omitempty"`
+
 	// Tags
 	// ExternalDocs
 	// OperationID
