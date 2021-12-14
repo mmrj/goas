@@ -379,8 +379,6 @@ func (p *parser) parseEntryPoint() error {
 				}
 				// p.debug(attribute, value)
 				switch attribute {
-				case "@cligroups":
-					p.parseCliGroups(value)
 				case "@version":
 					p.OpenAPI.Info.Version = value
 				case "@title":
@@ -497,6 +495,8 @@ func (p *parser) parseEntryPoint() error {
 					}
 
 					p.OpenAPI.Tags = append(p.OpenAPI.Tags, *t)
+				case "@cligroups":
+					p.parseCliGroups(value)
 				case "@packagealias":
 					originalName, newName, err := parsePackageAliases(comment)
 
@@ -944,14 +944,6 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 		attribute := strings.Fields(comment)[0]
 		value := strings.TrimSpace(comment[len(attribute):])
 		switch strings.ToLower(attribute) {
-		case "@cligroup":
-			operation.CliGroup = value
-		case "@cliignore":
-			operation.CliIgnore = true
-		case "@cliname":
-			operation.CliName = value
-		case "@clioperationaliases":
-			operation.CliOperationAliases = strings.Split(value, ",")
 		case "@title":
 			operation.Summary = value
 		case "@description":
@@ -975,6 +967,14 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 			}
 		case "@route", "@router":
 			err = p.parseRouteComment(operation, comment)
+		case "@cligroup":
+			operation.CliGroup = value
+		case "@cliignore":
+			operation.CliIgnore = true
+		case "@cliname":
+			operation.CliName = value
+		case "@clioperationaliases":
+			operation.CliOperationAliases = strings.Split(value, ",")
 		}
 		if err != nil {
 			return err
