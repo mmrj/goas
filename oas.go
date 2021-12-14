@@ -102,17 +102,17 @@ type PathItemObject struct {
 }
 
 type OperationObject struct {
-	Responses   ResponsesObject    `json:"responses"` // Required
-	Tags        []string           `json:"tags,omitempty"`
-	Summary     string             `json:"summary,omitempty"`
-	Description string             `json:"description,omitempty"`
-	Parameters  []ParameterObject  `json:"parameters,omitempty"`
-	RequestBody *RequestBodyObject `json:"requestBody,omitempty"`
-	OperationID string             `json:"operationId,omitempty"`
-	CliIgnore   bool               `json:"x-cli-ignore,omitempty"`
-	CliGroup    string             `json:"x-cli-group,omitempty"`
-	CliName     string             `json:"x-cli-name,omitempty"`
-	CliAlias    []string           `json:"x-cli-aliases,omitempty"`
+	Responses           ResponsesObject    `json:"responses"` // Required
+	Tags                []string           `json:"tags,omitempty"`
+	Summary             string             `json:"summary,omitempty"`
+	Description         string             `json:"description,omitempty"`
+	Parameters          []ParameterObject  `json:"parameters,omitempty"`
+	RequestBody         *RequestBodyObject `json:"requestBody,omitempty"`
+	OperationID         string             `json:"operationId,omitempty"`
+	CliIgnore           bool               `json:"x-cli-ignore,omitempty"`
+	CliGroup            string             `json:"x-cli-group,omitempty"`
+	CliName             string             `json:"x-cli-name,omitempty"`
+	CliOperationAliases []string           `json:"x-cli-aliases,omitempty"`
 
 	// Tags
 	// ExternalDocs

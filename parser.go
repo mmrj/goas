@@ -950,8 +950,8 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 			operation.CliIgnore = true
 		case "@cliname":
 			operation.CliName = value
-		case "@clialias":
-			operation.CliAlias = strings.Split(value, ",")
+		case "@clioperationaliases":
+			operation.CliOperationAliases = strings.Split(value, ",")
 		case "@title":
 			operation.Summary = value
 		case "@description":
