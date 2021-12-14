@@ -44,6 +44,7 @@ type InfoObject struct {
 	License        *LicenseObject             `json:"license,omitempty"`
 	Version        string                     `json:"version"`
 	CliGroups      map[string]CliConfigObject `json:"x-cli-groups,omitempty"`
+	CliDescription string                     `json:"x-cli-description,omitempty"`
 }
 
 type CliConfigObject struct {
@@ -102,17 +103,18 @@ type PathItemObject struct {
 }
 
 type OperationObject struct {
-	Responses           ResponsesObject    `json:"responses"` // Required
-	Tags                []string           `json:"tags,omitempty"`
-	Summary             string             `json:"summary,omitempty"`
-	Description         string             `json:"description,omitempty"`
-	Parameters          []ParameterObject  `json:"parameters,omitempty"`
-	RequestBody         *RequestBodyObject `json:"requestBody,omitempty"`
-	OperationID         string             `json:"operationId,omitempty"`
-	CliIgnore           bool               `json:"x-cli-ignore,omitempty"`
-	CliGroup            string             `json:"x-cli-group,omitempty"`
-	CliName             string             `json:"x-cli-name,omitempty"`
-	CliOperationAliases []string           `json:"x-cli-aliases,omitempty"`
+	Responses               ResponsesObject    `json:"responses"` // Required
+	Tags                    []string           `json:"tags,omitempty"`
+	Summary                 string             `json:"summary,omitempty"`
+	Description             string             `json:"description,omitempty"`
+	Parameters              []ParameterObject  `json:"parameters,omitempty"`
+	RequestBody             *RequestBodyObject `json:"requestBody,omitempty"`
+	OperationID             string             `json:"operationId,omitempty"`
+	CliGroup                string             `json:"x-cli-group,omitempty"`
+	CliName                 string             `json:"x-cli-name,omitempty"`
+	CliOperationDescription string             `json:"x-cli-description,omitempty"`
+	CliIgnore               bool               `json:"x-cli-ignore,omitempty"`
+	CliOperationAliases     []string           `json:"x-cli-aliases,omitempty"`
 
 	// Tags
 	// ExternalDocs

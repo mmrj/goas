@@ -17,6 +17,7 @@ package main
 // @Tags "Vfoo"
 // @Tags "Foo With Spaces"
 // @CliGroups feature-flags aliases:flags,featureflags
+// @CliDescription foo
 
 func main() {
 

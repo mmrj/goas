@@ -17,7 +17,9 @@
       "feature-flags": {
         "aliases": ["flags", "featureflags"]
       }
-    }
+    
+    },
+    "x-cli-description": "foo"
   },
   "servers": [
     {
