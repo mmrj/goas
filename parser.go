@@ -21,6 +21,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/iancoleman/orderedmap"
 	module "golang.org/x/mod/modfile"
 )
@@ -38,7 +39,7 @@ type parser struct {
 	GoModCachePath string
 	GoRootSrcPath  string
 
-	OpenAPI        OpenAPIObject
+	OpenAPI        *openapi3.T
 	PackageAliases map[string]string
 
 	CorePkgs      map[string]bool
@@ -87,10 +88,10 @@ func newParser(modulePath, mainFilePath, handlerPath, descriptionRefPath string,
 		FileRefPath:             descriptionRefPath,
 	}
 	p.OpenAPI.OpenAPI = OpenAPIVersion
-	p.OpenAPI.Paths = make(PathsObject)
-	p.OpenAPI.Security = []map[string][]string{}
-	p.OpenAPI.Components.Schemas = make(map[string]*SchemaObject)
-	p.OpenAPI.Components.SecuritySchemes = map[string]*SecuritySchemeObject{}
+	p.OpenAPI.Paths = make(openapi3.Paths)
+	p.OpenAPI.Security = make(openapi3.SecurityRequirements, 0)
+	p.OpenAPI.Components.Schemas = make(openapi3.Schemas)
+	p.OpenAPI.Components.SecuritySchemes = make(openapi3.SecuritySchemes)
 
 	// check modulePath is exist
 	modulePath, _ = filepath.Abs(modulePath)
@@ -307,22 +308,22 @@ func (p *parser) validateSchemaNames() []string {
 }
 
 func (p *parser) explodeRefs() error {
-	if p.OpenAPI.Info.Description != nil {
-		desc, err := fetchRef(p.FileRefPath, p.OpenAPI.Info.Description.Value)
+	if p.OpenAPI.Info.Description != "" {
+		desc, err := fetchRef(p.FileRefPath, p.OpenAPI.Info.Description)
 		if err != nil {
 			return err
 		}
-		p.OpenAPI.Info.Description.Value = desc
+		p.OpenAPI.Info.Description = desc
 	}
 	for i, tag := range p.OpenAPI.Tags {
-		if tag.Description == nil {
+		if tag.Description == "" {
 			continue
 		}
-		desc, err := fetchRef(p.FileRefPath, tag.Description.Value)
+		desc, err := fetchRef(p.FileRefPath, tag.Description)
 		if err != nil {
 			return err
 		}
-		p.OpenAPI.Tags[i].Description.Value = desc
+		p.OpenAPI.Tags[i].Description = desc
 	}
 
 	return nil
@@ -383,40 +384,37 @@ func (p *parser) parseEntryPoint() error {
 				case "@title":
 					p.OpenAPI.Info.Title = value
 				case "@description":
-					if p.OpenAPI.Info.Description == nil {
-						p.OpenAPI.Info.Description = &ReffableString{}
-					}
-					p.OpenAPI.Info.Description.Value = value
+					p.OpenAPI.Info.Description = value
 				case "@termsofserviceurl":
 					p.OpenAPI.Info.TermsOfService = value
 				case "@contactname":
 					if p.OpenAPI.Info.Contact == nil {
-						p.OpenAPI.Info.Contact = &ContactObject{}
+						p.OpenAPI.Info.Contact = &openapi3.Contact{}
 					}
 					p.OpenAPI.Info.Contact.Name = value
 				case "@contactemail":
 					if p.OpenAPI.Info.Contact == nil {
-						p.OpenAPI.Info.Contact = &ContactObject{}
+						p.OpenAPI.Info.Contact = &openapi3.Contact{}
 					}
 					p.OpenAPI.Info.Contact.Email = value
 				case "@contacturl":
 					if p.OpenAPI.Info.Contact == nil {
-						p.OpenAPI.Info.Contact = &ContactObject{}
+						p.OpenAPI.Info.Contact = &openapi3.Contact{}
 					}
 					p.OpenAPI.Info.Contact.URL = value
 				case "@licensename":
 					if p.OpenAPI.Info.License == nil {
-						p.OpenAPI.Info.License = &LicenseObject{}
+						p.OpenAPI.Info.License = &openapi3.License{}
 					}
 					p.OpenAPI.Info.License.Name = value
 				case "@licenseurl":
 					if p.OpenAPI.Info.License == nil {
-						p.OpenAPI.Info.License = &LicenseObject{}
+						p.OpenAPI.Info.License = &openapi3.License{}
 					}
 					p.OpenAPI.Info.License.URL = value
 				case "@server":
 					fields := strings.Split(value, " ")
-					s := ServerObject{URL: fields[0], Description: value[len(fields[0]):]}
+					s := &openapi3.Server{URL: fields[0], Description: value[len(fields[0]):]}
 					p.OpenAPI.Servers = append(p.OpenAPI.Servers, s)
 				case "@security":
 					fields := strings.Split(value, " ")
@@ -427,21 +425,22 @@ func (p *parser) parseEntryPoint() error {
 				case "@securityscheme":
 					fields := strings.Split(value, " ")
 
-					var scheme *SecuritySchemeObject
+					var scheme *openapi3.SecurityScheme
 					if strings.Contains(fields[1], "oauth2") {
 						if oauthScheme, ok := p.OpenAPI.Components.SecuritySchemes[fields[0]]; ok {
-							scheme = oauthScheme
+							scheme = oauthScheme.Value
 						} else {
-							scheme = &SecuritySchemeObject{
-								Type:       "oauth2",
-								OAuthFlows: &SecuritySchemeOauthObject{},
+							scheme = &openapi3.SecurityScheme{
+								Type:  "oauth2",
+								Flows: &openapi3.OAuthFlows{},
 							}
 						}
 					}
 
 					if scheme == nil {
-						scheme = &SecuritySchemeObject{
-							Type: fields[1],
+						scheme = &openapi3.SecurityScheme{
+							Type:  fields[1],
+							Flows: &openapi3.OAuthFlows{},
 						}
 					}
 					switch fields[1] {
@@ -456,28 +455,31 @@ func (p *parser) parseEntryPoint() error {
 						scheme.OpenIdConnectUrl = fields[2]
 						scheme.Description = strings.Join(fields[3:], " ")
 					case "oauth2AuthCode":
-						scheme.OAuthFlows.AuthorizationCode = &SecuritySchemeOauthFlowObject{
-							AuthorizationUrl: fields[2],
-							TokenUrl:         fields[3],
+						scheme.Flows.AuthorizationCode = &openapi3.OAuthFlow{
+							AuthorizationURL: fields[2],
+							TokenURL:         fields[3],
 							Scopes:           make(map[string]string, 0),
 						}
 					case "oauth2Implicit":
-						scheme.OAuthFlows.Implicit = &SecuritySchemeOauthFlowObject{
-							AuthorizationUrl: fields[2],
+						scheme.Flows.Implicit = &openapi3.OAuthFlow{
+							AuthorizationURL: fields[2],
 							Scopes:           make(map[string]string, 0),
 						}
 					case "oauth2ResourceOwnerCredentials":
-						scheme.OAuthFlows.ResourceOwnerPassword = &SecuritySchemeOauthFlowObject{
-							TokenUrl: fields[2],
+						scheme.Flows.Password = &openapi3.OAuthFlow{
+							TokenURL: fields[2],
 							Scopes:   make(map[string]string, 0),
 						}
 					case "oauth2ClientCredentials":
-						scheme.OAuthFlows.ClientCredentials = &SecuritySchemeOauthFlowObject{
-							TokenUrl: fields[2],
+						scheme.Flows.ClientCredentials = &openapi3.OAuthFlow{
+							TokenURL: fields[2],
 							Scopes:   make(map[string]string, 0),
 						}
 					}
-					p.OpenAPI.Components.SecuritySchemes[fields[0]] = scheme
+					p.OpenAPI.Components.SecuritySchemes[fields[0]] = &openapi3.SecuritySchemeRef{
+						Ref:   "#/components/securitySchemes/" + fields[0],
+						Value: scheme,
+					}
 				case "@securityscope":
 					fields := strings.Split(value, " ")
 
@@ -508,15 +510,15 @@ func (p *parser) parseEntryPoint() error {
 
 	// Apply security scopes to their security schemes
 	for scheme, _ := range p.OpenAPI.Components.SecuritySchemes {
-		if p.OpenAPI.Components.SecuritySchemes[scheme].Type == "oauth2" {
+		if p.OpenAPI.Components.SecuritySchemes[scheme].Value.Type == "oauth2" {
 			if scopes, ok := oauthScopes[scheme]; ok {
-				p.OpenAPI.Components.SecuritySchemes[scheme].OAuthFlows.ApplyScopes(scopes)
+				ApplyScopes(p.OpenAPI.Components.SecuritySchemes[scheme].Value.Flows, scopes)
 			}
 		}
 	}
 
 	if len(p.OpenAPI.Servers) < 1 {
-		p.OpenAPI.Servers = append(p.OpenAPI.Servers, ServerObject{URL: "/", Description: "Default Server URL"})
+		p.OpenAPI.Servers = append(p.OpenAPI.Servers, &openapi3.Server{URL: "/", Description: "Default Server URL"})
 	}
 
 	if p.OpenAPI.Info.Title == "" {
@@ -1216,7 +1218,7 @@ func (p *parser) routeAndMethodExist(route string, method string) bool {
 	return false
 }
 
-func (p *parser) parseRouteComment(operation *OperationObject, comment string) error {
+func (p *parser) parseRouteComment(operation *openapi3.Operation, comment string) error {
 	sourceString := strings.TrimSpace(comment[len("@Router"):])
 
 	// /path [method]
@@ -1228,7 +1230,7 @@ func (p *parser) parseRouteComment(operation *OperationObject, comment string) e
 
 	_, ok := p.OpenAPI.Paths[matches[1]]
 	if !ok {
-		p.OpenAPI.Paths[matches[1]] = &PathItemObject{}
+		p.OpenAPI.Paths[matches[1]] = &openapi3.PathItem{}
 	} else if p.routeAndMethodExist(matches[1], matches[2]) {
 		return fmt.Errorf("Already exists, %q [%q]", matches[1], matches[2])
 	}

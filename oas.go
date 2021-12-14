@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"github.com/getkin/kin-openapi/openapi3"
 	"strings"
 
 	"github.com/iancoleman/orderedmap"
@@ -267,6 +268,24 @@ type SecuritySchemeOauthObject struct {
 	AuthorizationCode     *SecuritySchemeOauthFlowObject `json:"authorizationCode,omitempty"`
 	ResourceOwnerPassword *SecuritySchemeOauthFlowObject `json:"password,omitempty"`
 	ClientCredentials     *SecuritySchemeOauthFlowObject `json:"clientCredentials,omitempty"`
+}
+
+func ApplyScopes(flows *openapi3.OAuthFlows, scopes map[string]string) {
+	if flows.Implicit != nil {
+		flows.Implicit.Scopes = scopes
+	}
+
+	if flows.AuthorizationCode != nil {
+		flows.AuthorizationCode.Scopes = scopes
+	}
+
+	if flows.Password != nil {
+		flows.Password.Scopes = scopes
+	}
+
+	if flows.ClientCredentials != nil {
+		flows.ClientCredentials.Scopes = scopes
+	}
 }
 
 func (s *SecuritySchemeOauthObject) ApplyScopes(scopes map[string]string) {

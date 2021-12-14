@@ -3,6 +3,7 @@ module github.com/launchdarkly/goas
 go 1.15
 
 require (
+	github.com/getkin/kin-openapi v0.86.0
 	github.com/iancoleman/orderedmap v0.1.0
 	github.com/jarcoal/httpmock v1.0.8
 	github.com/stretchr/testify v1.7.0
