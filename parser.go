@@ -990,9 +990,9 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 			case "@clioperationaliases":
 				operation.CliOperationAliases = strings.Split(value, ",")
 			}
-			if err != nil {
-				return err
-			}
+		}
+		if err != nil {
+			return err
 		}
 	}
 	return nil
