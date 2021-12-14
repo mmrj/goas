@@ -946,6 +946,8 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 		tagList = append(tagList, tag.Name)
 	}
 
+	operation.CliIgnore = true
+
 	for _, astComment := range astComments {
 		comment := strings.TrimSpace(strings.TrimLeft(astComment.Text, "/"))
 		if len(comment) == 0 {
@@ -978,17 +980,19 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 			}
 		case "@route", "@router":
 			err = p.parseRouteComment(operation, comment)
-		case "@cligroup":
-			operation.CliGroup = value
-		case "@cliignore":
-			operation.CliIgnore = true
-		case "@cliname":
-			operation.CliName = value
-		case "@clioperationaliases":
-			operation.CliOperationAliases = strings.Split(value, ",")
-		}
-		if err != nil {
-			return err
+		case "@cligroup", "@clioperationaliases", "@cliname":
+			operation.CliIgnore = false
+			switch strings.ToLower(attribute) {
+			case "@cligroup":
+				operation.CliGroup = value
+			case "@cliname":
+				operation.CliName = value
+			case "@clioperationaliases":
+				operation.CliOperationAliases = strings.Split(value, ",")
+			}
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
