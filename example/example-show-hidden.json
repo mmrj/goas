@@ -72,7 +72,8 @@
         "tags": ["Foo"],
         "summary": "Get all foos",
         "description": "Get all foos",
-        "operationId": "getAllFoos"
+        "operationId": "getAllFoos",
+        "x-cli-ignore": true
       },
       "post": {
         "responses": {
@@ -107,7 +108,8 @@
             }
           },
           "required": true
-        }
+        },
+        "x-cli-ignore": true
       },
       "put": {
         "responses": {
@@ -132,7 +134,8 @@
           }
         },
         "summary": "Put foo",
-        "description": "Overwrite a foo"
+        "description": "Overwrite a foo",
+        "x-cli-ignore": true
       }
     },
     "/api/v2/foo-spaces": {
@@ -161,7 +164,8 @@
         "tags": ["Foo With Spaces"],
         "summary": "Get foos with spaces",
         "description": "Get foos with spaces",
-        "operationId": "getFoosWithSpaces"
+        "operationId": "getFoosWithSpaces",
+        "x-cli-ignore": true
       }
     },
     "/api/v2/foo/{id}": {
@@ -211,7 +215,8 @@
           },
           "required": true
         },
-        "operationId": "patchFoo"
+        "operationId": "patchFoo",
+        "x-cli-ignore": true
       }
     },
     "/api/v2/foo/{id}/inner": {
@@ -238,7 +243,8 @@
           }
         },
         "summary": "Get inner foos",
-        "description": "Get Inner Foos"
+        "description": "Get Inner Foos",
+        "x-cli-ignore": true
       }
     },
     "/api/v2/showHidden": {
@@ -256,7 +262,8 @@
           }
         },
         "summary": "Hidden Route",
-        "operationId": "getHiddenRoutes"
+        "operationId": "getHiddenRoutes",
+        "x-cli-ignore": true
       }
     },
     "/api/v2/vfoo": {
@@ -284,7 +291,8 @@
         },
         "tags": ["Vfoo"],
         "summary": "Get Foo as var",
-        "description": "get a foo var"
+        "description": "get a foo var",
+        "x-cli-ignore": true
       }
     }
   },
