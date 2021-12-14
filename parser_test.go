@@ -116,6 +116,39 @@ func Test_parseTags(t *testing.T) {
 	})
 }
 
+func Test_parseCliGroups(t *testing.T) {
+	t.Run("group and aliases", func(t *testing.T) {
+		// we only expect the value here, not the whole comment (omitting "@CliGroups")
+		group, cfg, err := parseCliGroups("feature-flags aliases:flags,featureflags")
+		require.NoError(t, err)
+		require.Equal(t, "feature-flags", group)
+		require.Equal(t, CliConfigObject{Aliases: []string{"flags", "featureflags"}}, cfg)
+	})
+
+	t.Run("group only", func(t *testing.T) {
+		group, cfg, err := parseCliGroups("feature-flags")
+		require.NoError(t, err)
+		require.Equal(t, "feature-flags", group)
+		require.Equal(t, CliConfigObject{}, cfg)
+	})
+
+	t.Run("missing aliases label", func(t *testing.T) {
+		_, _, err := parseCliGroups("feature-flags flags,featureflags")
+		require.Error(t, err)
+		require.Equal(t, "Expected: @CliGroups <command> (optional) aliases:<alias1,alias2,etc> Received: @CliGroups feature-flags flags,featureflags. Did you forget the \"aliases\" label?", err.Error())
+	})
+
+	t.Run("too many spaces", func(t *testing.T) {
+		_, _, err := parseCliGroups("projects aliases: proj,project")
+		require.Error(t, err)
+	})
+
+	t.Run("empty value", func(t *testing.T) {
+		_, _, err := parseCliGroups("")
+		require.Error(t, err)
+	})
+}
+
 func Test_handleCompoundType(t *testing.T) {
 	t.Run("oneOf", func(t *testing.T) {
 		p, err := setupParser()

@@ -496,7 +496,11 @@ func (p *parser) parseEntryPoint() error {
 
 					p.OpenAPI.Tags = append(p.OpenAPI.Tags, *t)
 				case "@cligroups":
-					p.parseCliGroups(value)
+					group, cfg, err := parseCliGroups(value)
+					if err != nil {
+						return err
+					}
+					p.OpenAPI.Info.CliGroups[group] = cfg
 				case "@packagealias":
 					originalName, newName, err := parsePackageAliases(comment)
 
@@ -537,29 +541,36 @@ func (p *parser) parseEntryPoint() error {
 	return nil
 }
 
-func (p *parser) parseCliGroups(comment string) {
+func parseCliGroups(value string) (string, CliConfigObject, error) {
+	r, _ := regexp.Compile(`(?P<group>[[:word:]-]+)((?:[[:space:]]+)(?:aliases:)(?P<aliases>.*))?`)
 
-	r, _ := regexp.Compile(`(?P<name>[[:word:]-]+)((?:[[:space:]]+)(?:aliases:)(?P<aliases>.*))?`)
-
-	matches := r.FindStringSubmatch(comment)
+	numValues := len(strings.Split(value, " "))
+	matches := r.FindStringSubmatch(value)
+	if len(matches) == 0 || numValues > 2 {
+		return "", CliConfigObject{}, fmt.Errorf("Expected: @CliGroups <command> (optional) aliases:<alias1,alias2,etc> Received: %s", "@CliGroups "+value)
+	}
 	names := r.SubexpNames()
 
-	var name string
+	var group string
 	var aliases []string
-
 	for i, match := range matches {
-
-		if names[i] == "name" {
-			name = match
+		if names[i] == "group" {
+			group = match
 		}
 		if names[i] == "aliases" && match != "" {
 			aliases = strings.Split(match, ",")
 		}
 	}
-
-	p.OpenAPI.Info.CliGroups[name] = CliConfigObject{
-		Aliases: aliases,
+	if numValues > 1 && len(aliases) == 0 {
+		return "", CliConfigObject{}, fmt.Errorf("Expected: @CliGroups <command> (optional) aliases:<alias1,alias2,etc> Received: %s. Did you forget the \"aliases\" label?", "@CliGroups "+value)
 	}
+
+	if len(aliases) > 0 {
+		return group, CliConfigObject{
+			Aliases: aliases,
+		}, nil
+	}
+	return group, CliConfigObject{}, nil
 }
 
 func parsePackageAliases(comment string) (string, string, error) {
