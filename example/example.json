@@ -17,9 +17,8 @@
       "feature-flags": {
         "aliases": ["flags", "featureflags"]
       }
-    
     },
-    "x-cli-description": "foo"
+    "x-cli-description": "The LaunchDarkly CLI lets you do all the things the API does but from the CL"
   },
   "servers": [
     {
