@@ -999,6 +999,11 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 			return err
 		}
 	}
+
+	if operation.CliOperationDescription == "" && operation.CliIgnore == false {
+		operation.CliOperationDescription = operation.Description
+	}
+
 	return nil
 }
 

@@ -145,6 +145,7 @@ func getFoosSpacesInTag() {
 
 // @Title Get all birds
 // @OperationId getBirds
+// @Description DefaultDescription
 // @Route /api/v2/birds [get]
 // @Success 200 object Bird "Success"
 // @CliGroup birds

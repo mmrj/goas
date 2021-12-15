@@ -41,7 +41,9 @@
           }
         },
         "summary": "Get all birds",
+        "description": "DefaultDescription",
         "operationId": "getBirds",
+        "x-cli-description": "DefaultDescription",
         "x-cli-group": "birds",
         "x-cli-name": "list",
         "x-cli-aliases": ["ls"]
