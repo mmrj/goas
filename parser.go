@@ -548,7 +548,7 @@ func parseCliGroups(value string) (string, CliConfigObject, error) {
 
 	matches := r.FindStringSubmatch(value)
 	if len(matches) == 0 {
-		return "", CliConfigObject{}, fmt.Errorf("Expected: @CliGroups <command> (optional) aliases:<alias1,alias2,etc> Received: %s", "@CliGroups "+value)
+		return "", CliConfigObject{}, fmt.Errorf("Expected: @CliGroups <group> (optional) aliases:<alias1,alias2,etc> (optional) description:\"Descriptive words\" Received: %s", "@CliGroups "+value)
 	}
 
 	names := r.SubexpNames()
