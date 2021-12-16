@@ -132,15 +132,18 @@ func Test_parseCliGroups(t *testing.T) {
 		require.Equal(t, CliConfigObject{}, cfg)
 	})
 
-	t.Run("missing aliases label", func(t *testing.T) {
-		_, _, err := parseCliGroups("feature-flags flags,featureflags")
-		require.Error(t, err)
-		require.Equal(t, "Expected: @CliGroups <command> (optional) aliases:<alias1,alias2,etc> Received: @CliGroups feature-flags flags,featureflags. Did you forget the \"aliases\" label?", err.Error())
+	t.Run("all attributes", func(t *testing.T) {
+		group, cfg, err := parseCliGroups(`targets aliases:user-targets parent:user-settings description:"Do stuff with user targets"`)
+		require.NoError(t, err)
+		require.Equal(t, "targets", group) // subgroup
+		require.Equal(t, CliConfigObject{Aliases: []string{"user-targets"}, Parent: "user-settings", Description: "Do stuff with user targets"}, cfg)
 	})
 
-	t.Run("too many spaces", func(t *testing.T) {
-		_, _, err := parseCliGroups("projects aliases: proj,project")
-		require.Error(t, err)
+	t.Run("different attribute order", func(t *testing.T) {
+		group, cfg, err := parseCliGroups(`projects description:"Do stuff with projects" aliases:proj,project`)
+		require.NoError(t, err)
+		require.Equal(t, "projects", group)
+		require.Equal(t, CliConfigObject{Aliases: []string{"proj", "project"}, Description: "Do stuff with projects"}, cfg)
 	})
 
 	t.Run("empty value", func(t *testing.T) {

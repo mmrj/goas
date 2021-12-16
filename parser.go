@@ -544,15 +544,19 @@ func (p *parser) parseEntryPoint() error {
 }
 
 func parseCliGroups(value string) (string, CliConfigObject, error) {
-	r, _ := regexp.Compile(`(?P<group>[[:word:]-]+)((?:[[:space:]]aliases:)(?P<aliases>[[:word:]-,]*)+)?((?:[[:space:]]parent:)(?P<parent>[[:word:]-]*)+)?`)
+	r, _ := regexp.Compile(`(?P<group>[[:word:]\-]+)(?:[[:space:]]+(?:aliases:[[:space:]]*(?P<aliases>[[:word:]\-]+(?:,[[:word:]\-]+)*)|parent:(?P<parent>[[:word:]\-]+)|description:"(?P<description>[^"]+)"|summary:"(?P<summary>[^"]+)"|hidden:(?P<hidden>true|false))+)*`)
 
 	matches := r.FindStringSubmatch(value)
+	if len(matches) == 0 {
+		return "", CliConfigObject{}, fmt.Errorf("Expected: @CliGroups <command> (optional) aliases:<alias1,alias2,etc> Received: %s", "@CliGroups "+value)
+	}
 
 	names := r.SubexpNames()
 
 	var group string
 	var aliases []string
 	var parent string
+	var description string
 	for i, match := range matches {
 		if names[i] == "group" {
 			group = match
@@ -563,21 +567,23 @@ func parseCliGroups(value string) (string, CliConfigObject, error) {
 		if names[i] == "parent" && match != "" {
 			parent = match
 		}
+		if names[i] == "description" && match != "" {
+			description = match
+		}
 	}
 
 	// TODO validation logic should be reinstated here. Removed due to supporting multiple :attributes
-
+	var cfg CliConfigObject
 	if len(aliases) > 0 {
-		return group, CliConfigObject{
-			Aliases: aliases,
-		}, nil
+		cfg.Aliases = aliases
 	}
 	if parent != "" {
-		return group, CliConfigObject{
-			Parent: parent,
-		}, nil
+		cfg.Parent = parent
 	}
-	return group, CliConfigObject{}, nil
+	if description != "" {
+		cfg.Description = description
+	}
+	return group, cfg, nil
 }
 
 func parsePackageAliases(comment string) (string, string, error) {
