@@ -544,17 +544,15 @@ func (p *parser) parseEntryPoint() error {
 }
 
 func parseCliGroups(value string) (string, CliConfigObject, error) {
-	r, _ := regexp.Compile(`(?P<group>[[:word:]-]+)((?:[[:space:]]+)(?:aliases:)(?P<aliases>.*))?`)
+	r, _ := regexp.Compile(`(?P<group>[[:word:]-]+)((?:[[:space:]]aliases:)(?P<aliases>[[:word:]-,]*)+)?((?:[[:space:]]parent:)(?P<parent>[[:word:]-]*)+)?`)
 
-	numValues := len(strings.Split(value, " "))
 	matches := r.FindStringSubmatch(value)
-	if len(matches) == 0 || numValues > 2 {
-		return "", CliConfigObject{}, fmt.Errorf("Expected: @CliGroups <command> (optional) aliases:<alias1,alias2,etc> Received: %s", "@CliGroups "+value)
-	}
+
 	names := r.SubexpNames()
 
 	var group string
 	var aliases []string
+	var parent string
 	for i, match := range matches {
 		if names[i] == "group" {
 			group = match
@@ -562,14 +560,21 @@ func parseCliGroups(value string) (string, CliConfigObject, error) {
 		if names[i] == "aliases" && match != "" {
 			aliases = strings.Split(match, ",")
 		}
+		if names[i] == "parent" && match != "" {
+			parent = match
+		}
 	}
-	if numValues > 1 && len(aliases) == 0 {
-		return "", CliConfigObject{}, fmt.Errorf("Expected: @CliGroups <command> (optional) aliases:<alias1,alias2,etc> Received: %s. Did you forget the \"aliases\" label?", "@CliGroups "+value)
-	}
+
+	// TODO validation logic should be reinstated here. Removed due to supporting multiple :attributes
 
 	if len(aliases) > 0 {
 		return group, CliConfigObject{
 			Aliases: aliases,
+		}, nil
+	}
+	if parent != "" {
+		return group, CliConfigObject{
+			Parent: parent,
 		}, nil
 	}
 	return group, CliConfigObject{}, nil

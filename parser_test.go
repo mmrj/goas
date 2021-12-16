@@ -5,7 +5,6 @@ import (
 	"go/ast"
 	"go/token"
 	"io/ioutil"
-	"os"
 	"testing"
 
 	"github.com/jarcoal/httpmock"
@@ -25,9 +24,6 @@ func TestExample(t *testing.T) {
 	bts, err := json.MarshalIndent(p.OpenAPI, "", "    ")
 	require.NoError(t, err)
 
-	// jsonString, _ := json.Marshal(bts)
-	// ioutil.WriteFile("big_marhsall.json", bts, os.ModePerm)
-
 	expected, _ := ioutil.ReadFile("./example/example.json")
 	require.JSONEq(t, string(expected), string(bts))
 }
@@ -41,7 +37,6 @@ func TestShowHiddenExample(t *testing.T) {
 
 	bts, err := json.MarshalIndent(p.OpenAPI, "", "    ")
 	require.NoError(t, err)
-	ioutil.WriteFile("big_marhsall.json", bts, os.ModePerm)
 
 	expected, _ := ioutil.ReadFile("./example/example-show-hidden.json")
 	require.JSONEq(t, string(expected), string(bts))

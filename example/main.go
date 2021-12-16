@@ -18,7 +18,6 @@ package main
 // @Tags "Foo With Spaces"
 // @CliGroups feature-flags aliases:flags,featureflags
 // @CliDescription The LaunchDarkly CLI lets you do all the things the API does but from the CL
-
 func main() {
 
 }

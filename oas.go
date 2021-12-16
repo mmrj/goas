@@ -49,6 +49,7 @@ type InfoObject struct {
 
 type CliConfigObject struct {
 	Aliases []string `json:"aliases,omitempty"`
+	Parent  string   `json:"parent,omitempty"`
 }
 
 // Wrapper for a string that may be of the form `$ref:foo`
