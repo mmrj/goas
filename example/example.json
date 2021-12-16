@@ -15,7 +15,8 @@
     "version": "2.0",
     "x-cli-groups": {
       "feature-flags": {
-        "aliases": ["flags", "featureflags"]
+        "aliases": ["flags", "featureflags"],
+        "description": "Do stuff with feature flags"
       }
     },
     "x-cli-description": "The LaunchDarkly CLI lets you do all the things the API does but from the CL"
@@ -43,9 +44,9 @@
         "summary": "Get all birds",
         "description": "DefaultDescription",
         "operationId": "getBirds",
-        "x-cli-description": "DefaultDescription",
         "x-cli-group": "birds",
         "x-cli-name": "list",
+        "x-cli-description": "DefaultDescription",
         "x-cli-aliases": ["ls"]
       }
     },

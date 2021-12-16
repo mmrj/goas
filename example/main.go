@@ -16,7 +16,7 @@ package main
 // @Tags "Bar" "Baz"
 // @Tags "Vfoo"
 // @Tags "Foo With Spaces"
-// @CliGroups feature-flags aliases:flags,featureflags
+// @CliGroups feature-flags aliases:flags,featureflags description:"Do stuff with feature flags"
 // @CliDescription The LaunchDarkly CLI lets you do all the things the API does but from the CL
 func main() {
 
