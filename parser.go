@@ -91,6 +91,7 @@ func newParser(modulePath, mainFilePath, handlerPath, descriptionRefPath string,
 	p.OpenAPI.Security = []map[string][]string{}
 	p.OpenAPI.Components.Schemas = make(map[string]*SchemaObject)
 	p.OpenAPI.Components.SecuritySchemes = map[string]*SecuritySchemeObject{}
+	p.OpenAPI.Info.CliGroups = make(map[string]CliConfigObject)
 
 	// check modulePath is exist
 	modulePath, _ = filepath.Abs(modulePath)
@@ -494,6 +495,14 @@ func (p *parser) parseEntryPoint() error {
 					}
 
 					p.OpenAPI.Tags = append(p.OpenAPI.Tags, *t)
+				case "@cligroups":
+					group, cfg, err := parseCliGroups(value)
+					if err != nil {
+						return err
+					}
+					p.OpenAPI.Info.CliGroups[group] = cfg
+				case "@clidescription":
+					p.OpenAPI.Info.CliDescription = value
 				case "@packagealias":
 					originalName, newName, err := parsePackageAliases(comment)
 
@@ -532,6 +541,49 @@ func (p *parser) parseEntryPoint() error {
 	}
 
 	return nil
+}
+
+func parseCliGroups(value string) (string, CliConfigObject, error) {
+	r, _ := regexp.Compile(`(?P<group>[[:word:]\-]+)(?:[[:space:]]+(?:aliases:[[:space:]]*(?P<aliases>[[:word:]\-]+(?:,[[:word:]\-]+)*)|parent:(?P<parent>[[:word:]\-]+)|description:"(?P<description>[^"]+)"|summary:"(?P<summary>[^"]+)"|hidden:(?P<hidden>true|false))+)*`)
+
+	matches := r.FindStringSubmatch(value)
+	if len(matches) == 0 {
+		return "", CliConfigObject{}, fmt.Errorf("Expected: @CliGroups <group> (optional) aliases:<alias1,alias2,etc> (optional) description:\"Descriptive words\" Received: %s", "@CliGroups "+value)
+	}
+
+	names := r.SubexpNames()
+
+	var group string
+	var aliases []string
+	var parent string
+	var description string
+	for i, match := range matches {
+		if names[i] == "group" {
+			group = match
+		}
+		if names[i] == "aliases" && match != "" {
+			aliases = strings.Split(match, ",")
+		}
+		if names[i] == "parent" && match != "" {
+			parent = match
+		}
+		if names[i] == "description" && match != "" {
+			description = match
+		}
+	}
+
+	// TODO validation logic should be reinstated here. Removed due to supporting multiple :attributes
+	var cfg CliConfigObject
+	if len(aliases) > 0 {
+		cfg.Aliases = aliases
+	}
+	if parent != "" {
+		cfg.Parent = parent
+	}
+	if description != "" {
+		cfg.Description = description
+	}
+	return group, cfg, nil
 }
 
 func parsePackageAliases(comment string) (string, string, error) {
@@ -907,6 +959,8 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 		tagList = append(tagList, tag.Name)
 	}
 
+	operation.CliIgnore = true
+
 	for _, astComment := range astComments {
 		comment := strings.TrimSpace(strings.TrimLeft(astComment.Text, "/"))
 		if len(comment) == 0 {
@@ -939,11 +993,28 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 			}
 		case "@route", "@router":
 			err = p.parseRouteComment(operation, comment)
+		case "@cligroup", "@clioperationaliases", "@cliname", "@clioperationdescription":
+			operation.CliIgnore = false
+			switch strings.ToLower(attribute) {
+			case "@cligroup":
+				operation.CliGroup = value
+			case "@cliname":
+				operation.CliName = value
+			case "@clioperationdescription":
+				operation.CliOperationDescription = value
+			case "@clioperationaliases":
+				operation.CliOperationAliases = strings.Split(value, ",")
+			}
 		}
 		if err != nil {
 			return err
 		}
 	}
+
+	if operation.CliOperationDescription == "" && operation.CliIgnore == false {
+		operation.CliOperationDescription = operation.Description
+	}
+
 	return nil
 }
 

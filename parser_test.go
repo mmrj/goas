@@ -116,6 +116,42 @@ func Test_parseTags(t *testing.T) {
 	})
 }
 
+func Test_parseCliGroups(t *testing.T) {
+	t.Run("group and aliases", func(t *testing.T) {
+		// we only expect the value here, not the whole comment (omitting "@CliGroups")
+		group, cfg, err := parseCliGroups("feature-flags aliases:flags,featureflags")
+		require.NoError(t, err)
+		require.Equal(t, "feature-flags", group)
+		require.Equal(t, CliConfigObject{Aliases: []string{"flags", "featureflags"}}, cfg)
+	})
+
+	t.Run("group only", func(t *testing.T) {
+		group, cfg, err := parseCliGroups("feature-flags")
+		require.NoError(t, err)
+		require.Equal(t, "feature-flags", group)
+		require.Equal(t, CliConfigObject{}, cfg)
+	})
+
+	t.Run("all attributes", func(t *testing.T) {
+		group, cfg, err := parseCliGroups(`targets aliases:user-targets parent:user-settings description:"Do stuff with user targets"`)
+		require.NoError(t, err)
+		require.Equal(t, "targets", group) // subgroup
+		require.Equal(t, CliConfigObject{Aliases: []string{"user-targets"}, Parent: "user-settings", Description: "Do stuff with user targets"}, cfg)
+	})
+
+	t.Run("different attribute order", func(t *testing.T) {
+		group, cfg, err := parseCliGroups(`projects description:"Do stuff with projects" aliases:proj,project`)
+		require.NoError(t, err)
+		require.Equal(t, "projects", group)
+		require.Equal(t, CliConfigObject{Aliases: []string{"proj", "project"}, Description: "Do stuff with projects"}, cfg)
+	})
+
+	t.Run("empty value", func(t *testing.T) {
+		_, _, err := parseCliGroups("")
+		require.Error(t, err)
+	})
+}
+
 func Test_handleCompoundType(t *testing.T) {
 	t.Run("oneOf", func(t *testing.T) {
 		p, err := setupParser()

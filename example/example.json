@@ -12,7 +12,14 @@
       "name": "Apache 2.0",
       "url": "https://www.apache.org/licenses/LICENSE-2.0"
     },
-    "version": "2.0"
+    "version": "2.0",
+    "x-cli-groups": {
+      "feature-flags": {
+        "aliases": ["flags", "featureflags"],
+        "description": "Do stuff with feature flags"
+      }
+    },
+    "x-cli-description": "The LaunchDarkly CLI lets you do all the things the API does but from the CL"
   },
   "servers": [
     {
@@ -35,7 +42,12 @@
           }
         },
         "summary": "Get all birds",
-        "operationId": "getBirds"
+        "description": "DefaultDescription",
+        "operationId": "getBirds",
+        "x-cli-group": "birds",
+        "x-cli-name": "list",
+        "x-cli-description": "DefaultDescription",
+        "x-cli-aliases": ["ls"]
       }
     },
     "/api/v2/foo": {
@@ -61,12 +73,11 @@
             "description": "Invalid resource identifier"
           }
         },
-        "tags": [
-          "Foo"
-        ],
+        "tags": ["Foo"],
         "summary": "Get all foos",
         "description": "Get all foos",
-        "operationId": "getAllFoos"
+        "operationId": "getAllFoos",
+        "x-cli-ignore": true
       },
       "post": {
         "responses": {
@@ -101,7 +112,8 @@
             }
           },
           "required": true
-        }
+        },
+        "x-cli-ignore": true
       },
       "put": {
         "responses": {
@@ -126,7 +138,8 @@
           }
         },
         "summary": "Put foo",
-        "description": "Overwrite a foo"
+        "description": "Overwrite a foo",
+        "x-cli-ignore": true
       }
     },
     "/api/v2/foo-spaces": {
@@ -152,12 +165,11 @@
             "description": "Invalid resource identifier"
           }
         },
-        "tags": [
-          "Foo With Spaces"
-        ],
+        "tags": ["Foo With Spaces"],
         "summary": "Get foos with spaces",
         "description": "Get foos with spaces",
-        "operationId": "getFoosWithSpaces"
+        "operationId": "getFoosWithSpaces",
+        "x-cli-ignore": true
       }
     },
     "/api/v2/foo/{id}": {
@@ -207,7 +219,8 @@
           },
           "required": true
         },
-        "operationId": "patchFoo"
+        "operationId": "patchFoo",
+        "x-cli-ignore": true
       }
     },
     "/api/v2/foo/{id}/inner": {
@@ -234,7 +247,8 @@
           }
         },
         "summary": "Get inner foos",
-        "description": "Get Inner Foos"
+        "description": "Get Inner Foos",
+        "x-cli-ignore": true
       }
     },
     "/api/v2/vfoo": {
@@ -260,11 +274,10 @@
             "description": "Invalid resource identifier"
           }
         },
-        "tags": [
-          "Vfoo"
-        ],
+        "tags": ["Vfoo"],
         "summary": "Get Foo as var",
-        "description": "get a foo var"
+        "description": "get a foo var",
+        "x-cli-ignore": true
       }
     }
   },
@@ -272,9 +285,7 @@
     "schemas": {
       "Animal": {
         "type": "object",
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "properties": {
           "name": {
             "type": "string"
@@ -283,9 +294,7 @@
       },
       "Birb": {
         "type": "object",
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "properties": {
           "name": {
             "type": "string"
@@ -325,10 +334,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": [
-                "example1",
-                "example2"
-              ]
+              "enum": ["example1", "example2"]
             }
           }
         }
@@ -424,10 +430,7 @@
           },
           "myEnum": {
             "type": "string",
-            "enum": [
-              "value1",
-              "value2"
-            ]
+            "enum": ["value1", "value2"]
           },
           "changeReturn": {
             "$ref": "#/components/schemas/Instruction"
@@ -469,10 +472,7 @@
   },
   "security": [
     {
-      "ApiKey": [
-        "read",
-        "write"
-      ]
+      "ApiKey": ["read", "write"]
     }
   ],
   "tags": [
