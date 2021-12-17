@@ -46,7 +46,6 @@
         "operationId": "getBirds",
         "x-cli-group": "birds",
         "x-cli-name": "list",
-        "x-cli-description": "DefaultDescription",
         "x-cli-aliases": ["ls"]
       }
     },

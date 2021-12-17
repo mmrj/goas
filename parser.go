@@ -1011,10 +1011,6 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 		}
 	}
 
-	if operation.CliOperationDescription == "" && operation.CliIgnore == false {
-		operation.CliOperationDescription = operation.Description
-	}
-
 	return nil
 }
 
