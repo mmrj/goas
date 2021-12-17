@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/getkin/kin-openapi/openapi3"
 	"log"
 	"os"
 	"strings"
@@ -181,8 +182,34 @@ func replaceBackslash(origin string) string {
 }
 
 // checkFormatInt64 will see if the type is int64 and add to Format property if true
-func checkFormatInt64(typeName string, schemaObject *SchemaObject) {
+func checkFormatInt64(typeName string, schemaObject *openapi3.SchemaRef) {
 	if typeName == "int64" {
-		schemaObject.Format = "int64"
+		schemaObject.Value.Format = "int64"
 	}
+}
+
+func getSchemaExtensionDisabledNames(s *openapi3.SchemaRef) map[string]struct{} {
+	i, ok := s.Value.Extensions[ExtensionDisabledFieldNames]
+	if !ok {
+		return map[string]struct{}{}
+	}
+	return i.(map[string]struct{})
+}
+func getSchemaExtensionFieldName(s *openapi3.SchemaRef) string {
+	i, ok := s.Value.Extensions[ExtensionFieldName]
+	if !ok {
+		return ""
+	}
+	return i.(string)
+}
+func getSchemaExtensionID(s *openapi3.SchemaRef) string {
+	i, ok := s.Value.Extensions[ExtensionID]
+	if !ok {
+		return ""
+	}
+	return i.(string)
+}
+
+func strPtr(s string) *string {
+	return &s
 }

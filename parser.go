@@ -22,8 +22,14 @@ import (
 	"unicode"
 
 	"github.com/getkin/kin-openapi/openapi3"
-	"github.com/iancoleman/orderedmap"
 	module "golang.org/x/mod/modfile"
+)
+
+const (
+	ExtensionPkgName            = "PkgName"
+	ExtensionID                 = "ID"
+	ExtensionFieldName          = "FieldName"
+	ExtensionDisabledFieldNames = "DisabledFieldNames"
 )
 
 type parser struct {
@@ -46,7 +52,7 @@ type parser struct {
 	KnownPkgs     []pkg
 	KnownNamePkg  map[string]*pkg
 	KnownPathPkg  map[string]*pkg
-	KnownIDSchema map[string]*SchemaObject
+	KnownIDSchema map[string]*openapi3.SchemaRef
 
 	TypeSpecs               map[string]map[string]*ast.TypeSpec
 	PkgPathAstPkgCache      map[string]map[string]*ast.Package
@@ -78,7 +84,7 @@ func newParser(modulePath, mainFilePath, handlerPath, descriptionRefPath string,
 		KnownPkgs:               []pkg{},
 		KnownNamePkg:            map[string]*pkg{},
 		KnownPathPkg:            map[string]*pkg{},
-		KnownIDSchema:           map[string]*SchemaObject{},
+		KnownIDSchema:           map[string]*openapi3.SchemaRef{},
 		TypeSpecs:               map[string]map[string]*ast.TypeSpec{},
 		PkgPathAstPkgCache:      map[string]map[string]*ast.Package{},
 		PkgNameImportedPkgAlias: map[string]map[string][]string{},
@@ -86,6 +92,7 @@ func newParser(modulePath, mainFilePath, handlerPath, descriptionRefPath string,
 		OmitPackages:            omitPackages,
 		ShowHidden:              showHidden,
 		FileRefPath:             descriptionRefPath,
+		OpenAPI:                 &openapi3.T{},
 	}
 	p.OpenAPI.OpenAPI = OpenAPIVersion
 	p.OpenAPI.Paths = make(openapi3.Paths)
@@ -377,6 +384,10 @@ func (p *parser) parseEntryPoint() error {
 				if len(value) == 0 {
 					continue
 				}
+				if p.OpenAPI.Info == nil {
+					p.OpenAPI.Info = &openapi3.Info{}
+				}
+
 				// p.debug(attribute, value)
 				switch attribute {
 				case "@version":
@@ -495,7 +506,7 @@ func (p *parser) parseEntryPoint() error {
 						return err
 					}
 
-					p.OpenAPI.Tags = append(p.OpenAPI.Tags, *t)
+					p.OpenAPI.Tags = append(p.OpenAPI.Tags, t)
 				case "@packagealias":
 					originalName, newName, err := parsePackageAliases(comment)
 
@@ -546,15 +557,15 @@ func parsePackageAliases(comment string) (string, string, error) {
 	return matches[0][1], matches[1][1], nil
 }
 
-func parseTags(comment string) (*TagDefinition, error) {
+func parseTags(comment string) (*openapi3.Tag, error) {
 	re := regexp.MustCompile("\"([^\"]*)\"")
 	matches := re.FindAllStringSubmatch(comment, -1)
 	if len(matches) == 0 || len(matches[0]) == 1 {
 		return nil, fmt.Errorf("Expected: @Tags \"<name>\" [\"<description>\"] Received: %s", comment)
 	}
-	tag := TagDefinition{Name: matches[0][1]}
+	tag := openapi3.Tag{Name: matches[0][1]}
 	if len(matches) > 1 {
-		tag.Description = &ReffableString{Value: matches[1][1]}
+		tag.Description = matches[1][1]
 	}
 
 	return &tag, nil
@@ -890,8 +901,8 @@ func isHidden(astComments []*ast.Comment, showHidden bool) bool {
 }
 
 func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comment) error {
-	operation := &OperationObject{
-		Responses: map[string]*ResponseObject{},
+	operation := &openapi3.Operation{
+		Responses: openapi3.Responses{},
 	}
 	if !strings.HasPrefix(pkgPath, p.ModulePath) {
 		// ignore this pkgName
@@ -949,7 +960,7 @@ func (p *parser) parseOperation(pkgPath, pkgName string, astComments []*ast.Comm
 	return nil
 }
 
-func (p *parser) parseDescription(operation *OperationObject, description string) error {
+func (p *parser) parseDescription(operation *openapi3.Operation, description string) error {
 	desc, err := fetchRef(p.FileRefPath, description)
 	if err != nil {
 		return err
@@ -962,7 +973,7 @@ func (p *parser) parseDescription(operation *OperationObject, description string
 	return nil
 }
 
-func (p *parser) parseParamComment(pkgPath, pkgName string, operation *OperationObject, comment string) error {
+func (p *parser) parseParamComment(pkgPath, pkgName string, operation *openapi3.Operation, comment string) error {
 	// {name}  {in}  {goType}  {required}  {description}  		{example (optional)}
 	// user    body  User      true        "Info of a user."	"{\"name\":\"Bilbo\"}"
 	// f       file  ignored   true        "Upload a file."
@@ -987,47 +998,59 @@ func (p *parser) parseParamComment(pkgPath, pkgName string, operation *Operation
 	// `file`, `form`
 	if in == "file" || in == "files" || in == "form" {
 		if operation.RequestBody == nil {
-			operation.RequestBody = &RequestBodyObject{
-				Content: map[string]*MediaTypeObject{
-					ContentTypeForm: &MediaTypeObject{
-						Schema: SchemaObject{
-							Type:       &objectType,
-							Properties: orderedmap.New(),
+			operation.RequestBody = &openapi3.RequestBodyRef{
+				Value: &openapi3.RequestBody{
+					Content: openapi3.Content{
+						ContentTypeForm: &openapi3.MediaType{
+							Schema: &openapi3.SchemaRef{
+								Value: &openapi3.Schema{
+									Type:       objectType,
+									Properties: openapi3.Schemas{},
+								},
+							},
 						},
 					},
+					Required: required,
 				},
-				Required: required,
 			}
 		}
 		if in == "file" {
-			operation.RequestBody.Content[ContentTypeForm].Schema.Properties.Set(name, &SchemaObject{
-				Type:        &stringType,
-				Format:      "binary",
-				Description: description,
-			})
-		} else if in == "files" {
-			operation.RequestBody.Content[ContentTypeForm].Schema.Properties.Set(name, &SchemaObject{
-				Type: &arrayType,
-				Items: &SchemaObject{
-					Type:   &stringType,
-					Format: "binary",
+			operation.RequestBody.Value.Content[ContentTypeForm].Schema.Value.Properties[name] = &openapi3.SchemaRef{
+				Value: &openapi3.Schema{
+					Type:        stringType,
+					Format:      "binary",
+					Description: description,
 				},
-				Description: description,
-			})
+			}
+		} else if in == "files" {
+			operation.RequestBody.Value.Content[ContentTypeForm].Schema.Value.Properties[name] = &openapi3.SchemaRef{
+				Value: &openapi3.Schema{
+					Type: arrayType,
+					Items: &openapi3.SchemaRef{
+						Value: &openapi3.Schema{
+							Type:   stringType,
+							Format: "binary",
+						},
+					},
+					Description: description,
+				},
+			}
 		} else if isGoTypeOASType(goType) {
 			localGoType := goTypesOASTypes[goType]
-			operation.RequestBody.Content[ContentTypeForm].Schema.Properties.Set(name, &SchemaObject{
-				Type:        &localGoType,
-				Format:      goTypesOASFormats[goType],
-				Description: description,
-			})
+			operation.RequestBody.Value.Content[ContentTypeForm].Schema.Value.Properties[name] = &openapi3.SchemaRef{
+				Value: &openapi3.Schema{
+					Type:        localGoType,
+					Format:      goTypesOASFormats[goType],
+					Description: description,
+				},
+			}
 		}
 		return nil
 	}
 
 	// `path`, `query`, `header`, `cookie`
 	if in != "body" {
-		parameterObject := ParameterObject{
+		parameterObject := &openapi3.Parameter{
 			Name:        name,
 			In:          in,
 			Description: description,
@@ -1042,23 +1065,27 @@ func (p *parser) parseParamComment(pkgPath, pkgName string, operation *Operation
 			if err != nil {
 				p.debug("parseResponseComment cannot parse goType", goType)
 			}
-			operation.Parameters = append(operation.Parameters, parameterObject)
+			operation.Parameters = append(operation.Parameters, &openapi3.ParameterRef{Value: parameterObject})
 		} else if isGoTypeOASType(goType) {
 			localGoType := goTypesOASTypes[goType]
-			parameterObject.Schema = &SchemaObject{
-				Type:        &localGoType,
-				Format:      goTypesOASFormats[goType],
-				Description: description,
+			parameterObject.Schema = &openapi3.SchemaRef{
+				Value: &openapi3.Schema{
+					Type:        localGoType,
+					Format:      goTypesOASFormats[goType],
+					Description: description,
+				},
 			}
-			operation.Parameters = append(operation.Parameters, parameterObject)
+			operation.Parameters = append(operation.Parameters, &openapi3.ParameterRef{Value: parameterObject})
 		}
 		return nil
 	}
 
 	if operation.RequestBody == nil {
-		operation.RequestBody = &RequestBodyObject{
-			Content:  map[string]*MediaTypeObject{},
-			Required: required,
+		operation.RequestBody = &openapi3.RequestBodyRef{
+			Value: &openapi3.RequestBody{
+				Content:  openapi3.Content{},
+				Required: required,
+			},
 		}
 	}
 
@@ -1066,8 +1093,8 @@ func (p *parser) parseParamComment(pkgPath, pkgName string, operation *Operation
 	if err != nil {
 		return err
 	}
-	operation.RequestBody.Content[ContentTypeJson] = &MediaTypeObject{
-		Schema: *s,
+	operation.RequestBody.Value.Content[ContentTypeJson] = &openapi3.MediaType{
+		Schema: s,
 	}
 	// parse example
 	if len(matches) > 6 && matches[6] != "" {
@@ -1075,7 +1102,7 @@ func (p *parser) parseParamComment(pkgPath, pkgName string, operation *Operation
 		if err != nil {
 			return err
 		}
-		operation.RequestBody.Content[ContentTypeJson].Example = exampleRequestBody
+		operation.RequestBody.Value.Content[ContentTypeJson].Example = exampleRequestBody
 	}
 
 	return nil
@@ -1090,7 +1117,7 @@ func parseRequestBodyExample(example string) (interface{}, error) {
 	return exampleRequestBody, nil
 }
 
-func (p *parser) parseBodyType(pkgPath, pkgName, typeName string) (*SchemaObject, error) {
+func (p *parser) parseBodyType(pkgPath, pkgName, typeName string) (*openapi3.SchemaRef, error) {
 	if strings.HasPrefix(typeName, "[]") || strings.HasPrefix(typeName, "map[]") || typeName == "time.Time" {
 		schema, err := p.parseSchemaObject(pkgPath, pkgName, typeName, true)
 		if err != nil {
@@ -1110,17 +1137,19 @@ func (p *parser) parseBodyType(pkgPath, pkgName, typeName string) (*SchemaObject
 		return nil, err
 	}
 	if isBasicGoType(registeredTypeName) {
-		return &SchemaObject{
-			Type: &stringType,
+		return &openapi3.SchemaRef{
+			Value: &openapi3.Schema{
+				Type: stringType,
+			},
 		}, nil
 	} else {
-		return &SchemaObject{
+		return &openapi3.SchemaRef{
 			Ref: addSchemaRefLinkPrefix(registeredTypeName),
 		}, nil
 	}
 }
 
-func (p *parser) parseResponseComment(pkgPath, pkgName string, operation *OperationObject, comment string) error {
+func (p *parser) parseResponseComment(pkgPath, pkgName string, operation *openapi3.Operation, comment string) error {
 	// {status}  {jsonType}  {goType}     {description}
 	// 201       object      models.User  "User Model"
 	// if 204 or something else without empty return payload
@@ -1154,10 +1183,12 @@ func (p *parser) parseResponseComment(pkgPath, pkgName string, operation *Operat
 		}
 	}
 
-	responseObject := &ResponseObject{
-		Content: map[string]*MediaTypeObject{},
+	responseObject := &openapi3.ResponseRef{
+		Value: &openapi3.Response{
+			Content: openapi3.Content{},
+		},
 	}
-	responseObject.Description = strings.Trim(paramsMap["description"], "\"")
+	responseObject.Value.Description = strPtr(strings.Trim(paramsMap["description"], "\""))
 
 	if goTypeRaw := paramsMap["goType"]; goTypeRaw != "" {
 		re = regexp.MustCompile(`\[\w*\]`)
@@ -1167,8 +1198,8 @@ func (p *parser) parseResponseComment(pkgPath, pkgName string, operation *Operat
 			if err != nil {
 				p.debug("parseResponseComment: cannot parse goType", goType)
 			}
-			responseObject.Content[ContentTypeJson] = &MediaTypeObject{
-				Schema: *schema,
+			responseObject.Value.Content[ContentTypeJson] = &openapi3.MediaType{
+				Schema: schema,
 			}
 		} else {
 			typeName, err := p.registerType(pkgPath, pkgName, matches[3])
@@ -1176,14 +1207,16 @@ func (p *parser) parseResponseComment(pkgPath, pkgName string, operation *Operat
 				return err
 			}
 			if isBasicGoType(typeName) {
-				responseObject.Content[ContentTypeText] = &MediaTypeObject{
-					Schema: SchemaObject{
-						Type: &stringType,
+				responseObject.Value.Content[ContentTypeText] = &openapi3.MediaType{
+					Schema: &openapi3.SchemaRef{
+						Value: &openapi3.Schema{
+							Type: stringType,
+						},
 					},
 				}
 			} else {
-				responseObject.Content[ContentTypeJson] = &MediaTypeObject{
-					Schema: SchemaObject{
+				responseObject.Value.Content[ContentTypeJson] = &openapi3.MediaType{
+					Schema: &openapi3.SchemaRef{
 						Ref: addSchemaRefLinkPrefix(typeName),
 					},
 				}
@@ -1257,8 +1290,8 @@ func (p *parser) parseRouteComment(operation *openapi3.Operation, comment string
 	return nil
 }
 
-func (p *parser) getSchemaObjectCached(pkgPath, pkgName, typeName string) (*SchemaObject, error) {
-	var schemaObject *SchemaObject
+func (p *parser) getSchemaObjectCached(pkgPath, pkgName, typeName string) (*openapi3.SchemaRef, error) {
+	var schemaObject *openapi3.SchemaRef
 
 	// see if we've already parsed this type
 	cachedObj := p.checkCache(pkgName, typeName)
@@ -1286,7 +1319,7 @@ func (p *parser) registerType(pkgPath, pkgName, typeName string) (string, error)
 		if err != nil {
 			return "", err
 		}
-		registerTypeName = schemaObject.ID
+		registerTypeName = getSchemaExtensionID(schemaObject)
 	}
 
 	if registerTypeName == "" {
@@ -1304,7 +1337,7 @@ func trimSplit(csl string) []string {
 	return s
 }
 
-func (p *parser) handleCompoundType(pkgPath, pkgName, typeName string) (*SchemaObject, error) {
+func (p *parser) handleCompoundType(pkgPath, pkgName, typeName string) (*openapi3.SchemaRef, error) {
 	re := regexp.MustCompile("(?i)(oneOf|anyOf|allOf|not)\\(([^\\)]*)\\)")
 	matches := re.FindStringSubmatch(typeName)
 	if len(matches) < 3 {
@@ -1321,7 +1354,7 @@ func (p *parser) handleCompoundType(pkgPath, pkgName, typeName string) (*SchemaO
 		return nil, fmt.Errorf("Invalid number of arguments for not compound type, expected 1 received %d", len(args))
 	}
 
-	var sobs []*SchemaObject
+	var sobs []*openapi3.SchemaRef
 	for i := range args {
 		result, err := p.parseBodyType(pkgPath, pkgName, args[i])
 		if err != nil {
@@ -1330,16 +1363,16 @@ func (p *parser) handleCompoundType(pkgPath, pkgName, typeName string) (*SchemaO
 		sobs = append(sobs, result)
 	}
 
-	sob := &SchemaObject{}
+	sob := &openapi3.SchemaRef{Value: &openapi3.Schema{}}
 	switch op {
 	case "not":
-		sob.Not = sobs[0]
+		sob.Value.Not = sobs[0]
 	case "oneof":
-		sob.OneOf = sobs
+		sob.Value.OneOf = sobs
 	case "anyof":
-		sob.AnyOf = sobs
+		sob.Value.AnyOf = sobs
 	case "allof":
-		sob.AllOf = sobs
+		sob.Value.AllOf = sobs
 	default:
 		return nil, fmt.Errorf("Invalid compound type '%s'", op)
 	}
@@ -1347,18 +1380,21 @@ func (p *parser) handleCompoundType(pkgPath, pkgName, typeName string) (*SchemaO
 	return sob, nil
 }
 
-func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register bool) (*SchemaObject, error) {
+func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register bool) (*openapi3.SchemaRef, error) {
 	var typeSpec *ast.TypeSpec
 	var exist bool
-	var schemaObject SchemaObject
+	var schemaObject openapi3.SchemaRef
+	schemaObject.Value = &openapi3.Schema{
+		ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{}},
+	}
 
 	// handler basic and some specific typeName
 	if strings.HasPrefix(typeName, "[]") {
-		schemaObject.Type = &arrayType
+		schemaObject.Value.Type = arrayType
 		itemTypeName := typeName[2:]
 		schema, ok := p.KnownIDSchema[p.genSchemaObjectID(pkgName, itemTypeName)]
 		if ok {
-			schemaObject.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(schema.ID)}
+			schemaObject.Value.Items = &openapi3.SchemaRef{Ref: addSchemaRefLinkPrefix(getSchemaExtensionID(schema))}
 			return &schemaObject, nil
 		}
 
@@ -1367,37 +1403,37 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 			return nil, err
 		}
 
-		if newParsedSchema.ID != "" {
-			schemaObject.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(newParsedSchema.ID)}
+		if id, exists := newParsedSchema.Value.Extensions[ExtensionID]; exists {
+			schemaObject.Value.Items = &openapi3.SchemaRef{Ref: addSchemaRefLinkPrefix(id.(string))}
 			return &schemaObject, nil
 		}
 
-		schemaObject.Items = newParsedSchema
+		schemaObject.Value.Items = newParsedSchema
 		return &schemaObject, nil
 	} else if strings.HasPrefix(typeName, "map[]") {
-		schemaObject.Type = &objectType
+		schemaObject.Value.Type = objectType
 		itemTypeName := typeName[5:]
 		schema, ok := p.KnownIDSchema[p.genSchemaObjectID(pkgName, itemTypeName)]
 		if ok {
-			schemaObject.AdditionalProperties = &SchemaObject{Ref: addSchemaRefLinkPrefix(schema.ID)}
+			schemaObject.Value.AdditionalProperties = &openapi3.SchemaRef{Ref: addSchemaRefLinkPrefix(getSchemaExtensionID(schema))}
 			return &schemaObject, nil
 		}
 		schemaProperty, err := p.parseSchemaObject(pkgPath, pkgName, itemTypeName, true)
 		if err != nil {
 			return nil, err
 		}
-		schemaObject.AdditionalProperties = schemaProperty
+		schemaObject.Value.AdditionalProperties = schemaProperty
 		return &schemaObject, nil
 	} else if typeName == "time.Time" {
-		schemaObject.Type = &stringType
-		schemaObject.Format = "date-time"
+		schemaObject.Value.Type = stringType
+		schemaObject.Value.Format = "date-time"
 		return &schemaObject, nil
 	} else if strings.HasPrefix(typeName, "interface{}") {
-		schemaObject.Type = nil
+		schemaObject.Value.Type = ""
 		return &schemaObject, nil
 	} else if isGoTypeOASType(typeName) {
 		localGoType := goTypesOASTypes[typeName]
-		schemaObject.Type = &localGoType
+		schemaObject.Value.Type = localGoType
 		return &schemaObject, nil
 	}
 
@@ -1418,9 +1454,10 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 				log.Fatalf("Can not find definition of %s ast.TypeSpec. Current package %s", typeName, pkgName)
 			}
 		}
-		schemaObject.PkgName = pkgName
-		schemaObject.ID = p.genSchemaObjectID(pkgName, typeName)
-		p.KnownIDSchema[schemaObject.ID] = &schemaObject
+		id := p.genSchemaObjectID(pkgName, typeName)
+		schemaObject.Value.Extensions[ExtensionPkgName] = pkgName
+		schemaObject.Value.Extensions[ExtensionID] = id
+		p.KnownIDSchema[id] = &schemaObject
 	} else {
 		guessPkgName := strings.Join(typeNameParts[:len(typeNameParts)-1], "/")
 		guessPkgPath := ""
@@ -1458,7 +1495,7 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 			if !exist {
 				if p.CorePkgs[guessPkgName] == true {
 					p.debugf("Ignoring missing type %s in core package %s", guessTypeName, guessPkgName)
-					schemaObject.Type = &objectType
+					schemaObject.Value.Type = objectType
 					return &schemaObject, nil
 				}
 
@@ -1466,9 +1503,10 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 					"If definition is in a vendor dependency, try running `go mod tidy && go mod vendor`",
 					guessTypeName, guessPkgName)
 			}
-			schemaObject.PkgName = guessPkgName
-			schemaObject.ID = p.genSchemaObjectID(guessPkgName, guessTypeName)
-			p.KnownIDSchema[schemaObject.ID] = &schemaObject
+			id := p.genSchemaObjectID(guessPkgName, guessTypeName)
+			schemaObject.Value.Extensions[ExtensionPkgName] = guessPkgName
+			schemaObject.Value.Extensions[ExtensionID] = id
+			p.KnownIDSchema[id] = &schemaObject
 		}
 		pkgPath, pkgName = guessPkgPath, guessPkgName
 	}
@@ -1476,7 +1514,7 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 	if isGoTypeOASType(p.getTypeAsString(typeSpec.Type)) && schemaObject.Ref == "" {
 		typeAsString := p.getTypeAsString(typeSpec.Type)
 		localGoType := goTypesOASTypes[typeAsString]
-		schemaObject.Type = &localGoType
+		schemaObject.Value.Type = localGoType
 		checkFormatInt64(typeAsString, &schemaObject)
 
 	} else if astIdent, ok := typeSpec.Type.(*ast.Ident); ok {
@@ -1485,15 +1523,15 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 		if err != nil {
 			return nil, err
 		}
-		schemaObject.Ref = addSchemaRefLinkPrefix(newSchema.ID)
+		schemaObject.Ref = addSchemaRefLinkPrefix(getSchemaExtensionID(newSchema))
 	} else if astStructType, ok := typeSpec.Type.(*ast.StructType); ok {
-		schemaObject.Type = &objectType
+		schemaObject.Value.Type = objectType
 		if astStructType.Fields != nil {
 			p.parseSchemaPropertiesFromStructFields(pkgPath, pkgName, &schemaObject, astStructType.Fields.List)
 		}
 	} else if astArrayType, ok := typeSpec.Type.(*ast.ArrayType); ok {
-		schemaObject.Type = &arrayType
-		schemaObject.Items = &SchemaObject{}
+		schemaObject.Value.Type = arrayType
+		schemaObject.Value.Items = &openapi3.SchemaRef{}
 		typeAsString := p.getTypeAsString(astArrayType.Elt)
 		typeAsString = strings.TrimLeft(typeAsString, "*")
 
@@ -1502,20 +1540,21 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 			if err != nil {
 				p.debug("parseSchemaObject parse array items err:", err)
 			} else {
-				if itemsSchema.ID != "" {
-					schemaObject.Items.Ref = addSchemaRefLinkPrefix(itemsSchema.ID)
+
+				if id := getSchemaExtensionID(itemsSchema); id != "" {
+					schemaObject.Value.Items.Ref = addSchemaRefLinkPrefix(id)
 				} else {
-					*schemaObject.Items = *itemsSchema
+					*schemaObject.Value.Items = *itemsSchema
 				}
 			}
 		} else if isGoTypeOASType(typeAsString) {
 			localGoType := goTypesOASTypes[typeAsString]
-			schemaObject.Items.Type = &localGoType
+			schemaObject.Value.Items.Value.Type = localGoType
 		}
 	} else if astMapType, ok := typeSpec.Type.(*ast.MapType); ok {
-		schemaObject.Type = &objectType
-		propertySchema := &SchemaObject{}
-		schemaObject.AdditionalProperties = propertySchema
+		schemaObject.Value.Type = objectType
+		propertySchema := &openapi3.SchemaRef{}
+		schemaObject.Value.AdditionalProperties = propertySchema
 		typeAsString := p.getTypeAsString(astMapType.Value)
 		typeAsString = strings.TrimLeft(typeAsString, "*")
 		if !isBasicGoType(typeAsString) {
@@ -1523,15 +1562,15 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 			if err != nil {
 				p.debug("parseSchemaObject parse array items err:", err)
 			} else {
-				if keySchema.ID != "" {
-					propertySchema.Ref = addSchemaRefLinkPrefix(keySchema.ID)
+				if id := getSchemaExtensionID(keySchema); id != "" {
+					propertySchema.Ref = addSchemaRefLinkPrefix(id)
 				} else {
 					*propertySchema = *keySchema
 				}
 			}
 		} else if isGoTypeOASType(typeAsString) {
 			localGoType := goTypesOASTypes[typeAsString]
-			propertySchema.Type = &localGoType
+			propertySchema.Value.Type = localGoType
 		}
 	} else if selectorType, ok := typeSpec.Type.(*ast.SelectorExpr); ok {
 		// this case is for referencing third party packages.
@@ -1548,9 +1587,9 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 							if err != nil {
 								return nil, err
 							}
-							schemaObject.Type = parsedPackageSchema.Type
-							schemaObject.Properties = parsedPackageSchema.Properties
-							schemaObject.AdditionalProperties = parsedPackageSchema.AdditionalProperties
+							schemaObject.Value.Type = parsedPackageSchema.Value.Type
+							schemaObject.Value.Properties = parsedPackageSchema.Value.Properties
+							schemaObject.Value.AdditionalProperties = parsedPackageSchema.Value.AdditionalProperties
 							break
 						}
 					}
@@ -1560,13 +1599,13 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 		}
 	} else if _, ok := typeSpec.Type.(*ast.InterfaceType); ok {
 		// free form object since the interface can be "anything"
-		schemaObject.Type = nil
+		schemaObject.Value.Type = ""
 	}
 
 	// we don't want to register 3rd party library types
 	if register {
 		// register schema object in spec tree if it doesn't exist
-		registerTypeName := schemaObject.ID
+		registerTypeName := getSchemaExtensionID(&schemaObject)
 		_, ok := p.OpenAPI.Components.Schemas[replaceBackslash(registerTypeName)]
 		if !ok {
 			p.OpenAPI.Components.Schemas[replaceBackslash(registerTypeName)] = &schemaObject
@@ -1576,11 +1615,11 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 			}
 			typeNameWithoutPackage := typeNameParts[len(typeNameParts)-1]
 			if schemaName, ok := p.ApiSchemaNames[pkgName][typeNameWithoutPackage]; ok {
-				if schemaName != schemaObject.ID {
-					return nil, fmt.Errorf("different schema object id for type %s#%s: %s vs %s", pkgName, typeNameWithoutPackage, schemaObject.ID, schemaName)
+				if schemaName != getSchemaExtensionID(&schemaObject) {
+					return nil, fmt.Errorf("different schema object id for type %s#%s: %s vs %s", pkgName, typeNameWithoutPackage, getSchemaExtensionID(&schemaObject), schemaName)
 				}
 			} else {
-				p.ApiSchemaNames[pkgName][typeNameWithoutPackage] = schemaObject.ID
+				p.ApiSchemaNames[pkgName][typeNameWithoutPackage] = getSchemaExtensionID(&schemaObject)
 			}
 		}
 	}
@@ -1600,14 +1639,18 @@ func (p *parser) getTypeSpec(pkgPath, pkgName, typeName string) (*ast.TypeSpec, 
 	return astTypeSpec, true
 }
 
-func (p *parser) parseAstFields(pkgPath, pkgName string, structSchema *SchemaObject, astFields []*ast.Field) {
+func (p *parser) parseAstFields(pkgPath, pkgName string, structSchema *openapi3.SchemaRef, astFields []*ast.Field) {
 	for _, astField := range astFields {
 		p.parseAstField(pkgPath, pkgName, structSchema, astField)
 	}
 }
 
-func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObject, astField *ast.Field) {
-	fieldSchema := &SchemaObject{}
+func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *openapi3.SchemaRef, astField *ast.Field) {
+	fieldSchema := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			ExtensionProps: openapi3.ExtensionProps{Extensions: map[string]interface{}{}},
+		},
+	}
 	typeAsString := p.getTypeAsString(astField.Type)
 	if renderedStruct := parseOverrideStructTag(astField); renderedStruct != "" {
 		typeAsString = renderedStruct
@@ -1642,54 +1685,54 @@ func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObje
 		if err != nil {
 			p.debug("parseSchemaPropertiesFromStructFields err:", err)
 		} else {
-			fieldSchema.ID = fieldSchemaObjectID
+			fieldSchema.Value.Extensions[ExtensionID] = fieldSchemaObjectID
 			fieldSchema.Ref = addSchemaRefLinkPrefix(fieldSchemaObjectID)
 		}
 	} else if isGoTypeOASType(typeAsString) {
 		localGoType := goTypesOASTypes[typeAsString]
-		fieldSchema.Type = &localGoType
+		fieldSchema.Value.Type = localGoType
 		checkFormatInt64(typeAsString, fieldSchema)
 	}
 	// for embedded fields
 	if len(astField.Names) == 0 {
-		if fieldSchema.Properties != nil {
-			for _, propertyName := range fieldSchema.Properties.Keys() {
-				_, exist := structSchema.Properties.Get(propertyName)
+		if fieldSchema.Value.Properties != nil {
+			for propertyName := range fieldSchema.Value.Properties {
+				_, exist := structSchema.Value.Properties[propertyName]
 				if exist {
 					return
 				}
-				propertySchema, _ := fieldSchema.Properties.Get(propertyName)
-				structSchema.Properties.Set(propertyName, propertySchema)
+				propertySchema := fieldSchema.Value.Properties[propertyName]
+				structSchema.Value.Properties[propertyName] = propertySchema
 			}
-			for _, required := range fieldSchema.Required {
-				structSchema.Required = append(structSchema.Required, required)
+			for _, required := range fieldSchema.Value.Required {
+				structSchema.Value.Required = append(structSchema.Value.Required, required)
 			}
-		} else if len(fieldSchema.Ref) != 0 && len(fieldSchema.ID) != 0 {
-			refSchema, ok := p.KnownIDSchema[fieldSchema.ID]
+		} else if len(fieldSchema.Ref) != 0 && len(getSchemaExtensionID(fieldSchema)) != 0 {
+			refSchema, ok := p.KnownIDSchema[getSchemaExtensionID(fieldSchema)]
 			if ok {
-				if refSchema.Properties == nil {
+				if refSchema.Value.Properties == nil {
 					p.debug("nil refSchema.Properties")
 					return
 				}
-				for _, propertyName := range refSchema.Properties.Keys() {
-					refPropertySchema, _ := refSchema.Properties.Get(propertyName)
-					_, disabled := structSchema.DisabledFieldNames[refPropertySchema.(*SchemaObject).FieldName]
+				for propertyName := range refSchema.Value.Properties {
+					refPropertySchema, _ := refSchema.Value.Properties[propertyName]
+					_, disabled := getSchemaExtensionDisabledNames(structSchema)[getSchemaExtensionFieldName(refPropertySchema)]
 					if disabled {
 						return
 					}
-					_, exist := structSchema.Properties.Get(propertyName)
+					_, exist := structSchema.Value.Properties[propertyName]
 					if exist {
 						return
 					}
-					structSchema.Properties.Set(propertyName, refPropertySchema)
+					structSchema.Value.Properties[propertyName] = refPropertySchema
 				}
-				structSchema.Required = append(structSchema.Required, refSchema.Required...)
+				structSchema.Value.Required = append(structSchema.Value.Required, refSchema.Value.Required...)
 			}
 		}
 	} else {
 		name := astField.Names[0].Name
-		fieldSchema.FieldName = name
-		_, disabled := structSchema.DisabledFieldNames[name]
+		fieldSchema.Value.Extensions[ExtensionFieldName] = name
+		_, disabled := getSchemaExtensionDisabledNames(structSchema)[name]
 		if disabled {
 			return
 		}
@@ -1701,17 +1744,17 @@ func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObje
 
 		name = newName
 
-		structSchema.Properties.Set(name, fieldSchema)
+		structSchema.Value.Properties[name] = fieldSchema
 	}
 }
 
-func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, structSchema *SchemaObject, astFields []*ast.Field) {
+func (p *parser) parseSchemaPropertiesFromStructFields(pkgPath, pkgName string, structSchema *openapi3.SchemaRef, astFields []*ast.Field) {
 	if astFields == nil {
 		return
 	}
-	structSchema.Properties = orderedmap.New()
-	if structSchema.DisabledFieldNames == nil {
-		structSchema.DisabledFieldNames = map[string]struct{}{}
+	structSchema.Value.Properties = openapi3.Schemas{}
+	if disabledFieldNames, ok := structSchema.Value.Extensions[ExtensionDisabledFieldNames]; !ok || disabledFieldNames == nil {
+		structSchema.Value.Extensions[ExtensionDisabledFieldNames] = map[string]struct{}{}
 	}
 
 	p.parseAstFields(pkgPath, pkgName, structSchema, astFields)
@@ -1758,7 +1801,7 @@ func parseOverrideStructTag(astField *ast.Field) (renderedStructName string) {
 	return renderedStructName
 }
 
-func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchema *SchemaObject, name string) (newName string, skip bool) {
+func parseStructTags(astField *ast.Field, structSchema *openapi3.SchemaRef, fieldSchema *openapi3.SchemaRef, name string) (newName string, skip bool) {
 	if astField.Tag != nil {
 		astFieldTag := reflect.StructTag(strings.Trim(astField.Tag.Value, "`"))
 		tagText := ""
@@ -1769,17 +1812,22 @@ func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchem
 		tagValues := strings.Split(tagText, ",")
 		for _, v := range tagValues {
 			if v == "-" {
-				structSchema.DisabledFieldNames[name] = struct{}{}
-				fieldSchema.Deprecated = true
+				getSchemaExtensionDisabledNames(structSchema)[name] = struct{}{}
+				fieldSchema.Value.Deprecated = true
 				return "", true
 			}
 			parseTagValue := strings.Split(v, "=")
 			if len(parseTagValue) > 0 {
 				if parseTagValue[0] == "enum" {
-					if fieldSchema.Type != nil && *fieldSchema.Type == "array" {
-						fieldSchema.Items.Enum = strings.Split(parseTagValue[1], " ")
+					splitStr := strings.Split(parseTagValue[1], " ")
+					splitI := make([]interface{}, len(splitStr))
+					for i := range splitStr {
+						splitI[i] = splitStr[i]
+					}
+					if fieldSchema.Value.Type == "array" {
+						fieldSchema.Value.Items.Value.Enum = splitI
 					} else {
-						fieldSchema.Enum = strings.Split(parseTagValue[1], " ")
+						fieldSchema.Value.Enum = splitI
 					}
 				}
 			}
@@ -1792,8 +1840,8 @@ func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchem
 		isRequired := false
 		for _, v := range tagValues {
 			if v == "-" {
-				structSchema.DisabledFieldNames[name] = struct{}{}
-				fieldSchema.Deprecated = true
+				getSchemaExtensionDisabledNames(structSchema)[name] = struct{}{}
+				fieldSchema.Value.Deprecated = true
 				return "", true
 			} else if v != "" && v != "omitempty" {
 				name = v
@@ -1801,53 +1849,53 @@ func parseStructTags(astField *ast.Field, structSchema *SchemaObject, fieldSchem
 		}
 
 		if tag := astFieldTag.Get("example"); tag != "" {
-			if fieldSchema.Type == nil {
-				fieldSchema.Example = tag
+			if fieldSchema.Value.Type == "" {
+				fieldSchema.Value.Example = tag
 			} else {
-				switch *fieldSchema.Type {
+				switch fieldSchema.Value.Type {
 				case "boolean":
-					fieldSchema.Example, _ = strconv.ParseBool(tag)
+					fieldSchema.Value.Example, _ = strconv.ParseBool(tag)
 				case "integer":
-					fieldSchema.Example, _ = strconv.Atoi(tag)
+					fieldSchema.Value.Example, _ = strconv.Atoi(tag)
 				case "number":
-					fieldSchema.Example, _ = strconv.ParseFloat(tag, 64)
+					fieldSchema.Value.Example, _ = strconv.ParseFloat(tag, 64)
 				case "array":
 					b, err := json.RawMessage(tag).MarshalJSON()
 					if err != nil {
-						fieldSchema.Example = "invalid example"
+						fieldSchema.Value.Example = "invalid example"
 					} else {
 						sliceOfInterface := []interface{}{}
 						err := json.Unmarshal(b, &sliceOfInterface)
 						if err != nil {
-							fieldSchema.Example = "invalid example"
+							fieldSchema.Value.Example = "invalid example"
 						} else {
-							fieldSchema.Example = sliceOfInterface
+							fieldSchema.Value.Example = sliceOfInterface
 						}
 					}
 				case "object":
 					b, err := json.RawMessage(tag).MarshalJSON()
 					if err != nil {
-						fieldSchema.Example = "invalid example"
+						fieldSchema.Value.Example = "invalid example"
 					} else {
 						mapOfInterface := map[string]interface{}{}
 						err := json.Unmarshal(b, &mapOfInterface)
 						if err != nil {
-							fieldSchema.Example = "invalid example"
+							fieldSchema.Value.Example = "invalid example"
 						} else {
-							fieldSchema.Example = mapOfInterface
+							fieldSchema.Value.Example = mapOfInterface
 						}
 					}
 				default:
-					fieldSchema.Example = tag
+					fieldSchema.Value.Example = tag
 				}
 			}
 		}
 		if _, ok := astFieldTag.Lookup("required"); ok || isRequired {
-			structSchema.Required = append(structSchema.Required, name)
+			structSchema.Value.Required = append(structSchema.Value.Required, name)
 		}
 
 		if desc := astFieldTag.Get("description"); desc != "" {
-			fieldSchema.Description = desc
+			fieldSchema.Value.Description = desc
 		}
 	}
 
@@ -1867,7 +1915,7 @@ func (p *parser) debugf(format string, args ...interface{}) {
 }
 
 // checkCache loops over possible aliased package names for a type to see if it's already in cache and returns that if found.
-func (p *parser) checkCache(pkgName, typeName string) *SchemaObject {
+func (p *parser) checkCache(pkgName, typeName string) *openapi3.SchemaRef {
 	currentName := p.genSchemaObjectID(pkgName, typeName)
 	if knownObj, ok := p.KnownIDSchema[currentName]; ok {
 		return knownObj
@@ -1937,12 +1985,12 @@ func sortedFileKeys(m map[string]*ast.File) []string {
 	return keys
 }
 
-func setNestedFieldSchemaProps(valuePrefix, typeAsString string, fieldSchema, structSchema *SchemaObject) {
+func setNestedFieldSchemaProps(valuePrefix, typeAsString string, fieldSchema, structSchema *openapi3.SchemaRef) {
 	if strings.HasPrefix(valuePrefix, "map") {
-		fieldSchema.Type = &objectType
-		fieldSchema.AdditionalProperties = &SchemaObject{Ref: addSchemaRefLinkPrefix(typeAsString)}
+		fieldSchema.Value.Type = objectType
+		fieldSchema.Value.AdditionalProperties = &openapi3.SchemaRef{Ref: addSchemaRefLinkPrefix(typeAsString)}
 	} else {
-		fieldSchema.Type = &arrayType
-		fieldSchema.Items = &SchemaObject{Ref: addSchemaRefLinkPrefix(typeAsString)}
+		fieldSchema.Value.Type = arrayType
+		fieldSchema.Value.Items = &openapi3.SchemaRef{Ref: addSchemaRefLinkPrefix(typeAsString)}
 	}
 }

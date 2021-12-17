@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/getkin/kin-openapi/openapi3"
 	"go/ast"
 	"go/token"
 	"io/ioutil"
@@ -65,10 +66,10 @@ func Test_parseRouteComment(t *testing.T) {
 	p, err := setupParser()
 	require.NoError(t, err)
 
-	operation := &OperationObject{
-		Responses: map[string]*ResponseObject{},
+	operation := &openapi3.Operation{
+		Responses: openapi3.Responses{},
 	}
-	p.OpenAPI.Paths["v2/foo/bar"] = &PathItemObject{}
+	p.OpenAPI.Paths["v2/foo/bar"] = &openapi3.PathItem{}
 	p.OpenAPI.Paths["v2/foo/bar"].Get = operation
 
 	duplicateError := p.parseRouteComment(operation, "@Router v2/foo/bar [get]")
@@ -78,7 +79,7 @@ func Test_parseRouteComment(t *testing.T) {
 func Test_infoDescriptionRef(t *testing.T) {
 	p, err := setupParser()
 	require.NoError(t, err)
-	p.OpenAPI.Info.Description = &ReffableString{Value: "$ref:http://dopeoplescroll.com/"}
+	p.OpenAPI.Info.Description = "$ref:http://dopeoplescroll.com/"
 
 	result, err := json.Marshal(p.OpenAPI.Info.Description)
 
@@ -91,14 +92,14 @@ func Test_parseTags(t *testing.T) {
 		result, err := parseTags("@Tags \"Foo\"")
 
 		require.NoError(t, err)
-		require.Equal(t, &TagDefinition{Name: "Foo"}, result)
+		require.Equal(t, &openapi3.Tag{Name: "Foo"}, result)
 	})
 
 	t.Run("name and description", func(t *testing.T) {
 		result, err := parseTags("@Tags \"Foobar\" \"Barbaz\"")
 
 		require.NoError(t, err)
-		require.Equal(t, &TagDefinition{Name: "Foobar", Description: &ReffableString{Value: "Barbaz"}}, result)
+		require.Equal(t, &openapi3.Tag{Name: "Foobar", Description: "Barbaz"}, result)
 	})
 
 	t.Run("name and description including ref ", func(t *testing.T) {
@@ -216,12 +217,12 @@ func Test_explodeRefs(t *testing.T) {
 	t.Run("Info.Description unchanged when not a ref", func(t *testing.T) {
 		p, err := setupParser()
 		require.NoError(t, err)
-		p.OpenAPI.Info.Description = &ReffableString{Value: "Foo"}
+		p.OpenAPI.Info.Description = "Foo"
 
 		err = p.explodeRefs()
 		require.NoError(t, err)
 
-		require.Equal(t, "Foo", p.OpenAPI.Info.Description.Value)
+		require.Equal(t, "Foo", p.OpenAPI.Info.Description)
 	})
 
 	t.Run("Info.Description inlined when a ref", func(t *testing.T) {
@@ -231,23 +232,23 @@ func Test_explodeRefs(t *testing.T) {
 			httpmock.NewStringResponder(200, "The quick brown fox jumped over the lazy dog"))
 		p, err := setupParser()
 		require.NoError(t, err)
-		p.OpenAPI.Info.Description = &ReffableString{Value: "$ref:https://example.com"}
+		p.OpenAPI.Info.Description = "$ref:https://example.com"
 
 		err = p.explodeRefs()
 		require.NoError(t, err)
 
-		require.Equal(t, "The quick brown fox jumped over the lazy dog", p.OpenAPI.Info.Description.Value)
+		require.Equal(t, "The quick brown fox jumped over the lazy dog", p.OpenAPI.Info.Description)
 	})
 
 	t.Run("Tags[].Description unchanged when not a ref", func(t *testing.T) {
 		p, err := setupParser()
 		require.NoError(t, err)
-		p.OpenAPI.Tags = []TagDefinition{{Name: "Foo", Description: &ReffableString{Value: "Foobar"}}}
+		p.OpenAPI.Tags = openapi3.Tags{{Name: "Foo", Description: "Foobar"}}
 
 		err = p.explodeRefs()
 		require.NoError(t, err)
 
-		require.Equal(t, "Foobar", p.OpenAPI.Tags[0].Description.Value)
+		require.Equal(t, "Foobar", p.OpenAPI.Tags[0].Description)
 	})
 
 	t.Run("Tags[].Description inlined when a ref", func(t *testing.T) {
@@ -257,12 +258,12 @@ func Test_explodeRefs(t *testing.T) {
 			httpmock.NewStringResponder(200, "The quick brown fox jumped over the lazy dog"))
 		p, err := setupParser()
 		require.NoError(t, err)
-		p.OpenAPI.Tags = []TagDefinition{{Name: "Foo", Description: &ReffableString{Value: "$ref:https://example.com"}}}
+		p.OpenAPI.Tags = openapi3.Tags{{Name: "Foo", Description: "$ref:https://example.com"}}
 
 		err = p.explodeRefs()
 		require.NoError(t, err)
 
-		require.Equal(t, "The quick brown fox jumped over the lazy dog", p.OpenAPI.Tags[0].Description.Value)
+		require.Equal(t, "The quick brown fox jumped over the lazy dog", p.OpenAPI.Tags[0].Description)
 	})
 
 	t.Run("Mixed of tag refs and non-refs", func(t *testing.T) {
@@ -272,13 +273,13 @@ func Test_explodeRefs(t *testing.T) {
 			httpmock.NewStringResponder(200, "The quick brown fox jumped over the lazy dog"))
 		p, err := setupParser()
 		require.NoError(t, err)
-		p.OpenAPI.Tags = []TagDefinition{{Name: "Foo", Description: &ReffableString{Value: "$ref:https://example.com"}}, {Name: "Bar", Description: &ReffableString{Value: "Baz"}}}
+		p.OpenAPI.Tags = openapi3.Tags{{Name: "Foo", Description: "$ref:https://example.com"}, {Name: "Bar", Description: "Baz"}}
 
 		err = p.explodeRefs()
 		require.NoError(t, err)
 
-		require.Equal(t, "The quick brown fox jumped over the lazy dog", p.OpenAPI.Tags[0].Description.Value)
-		require.Equal(t, "Baz", p.OpenAPI.Tags[1].Description.Value)
+		require.Equal(t, "The quick brown fox jumped over the lazy dog", p.OpenAPI.Tags[0].Description)
+		require.Equal(t, "Baz", p.OpenAPI.Tags[1].Description)
 	})
 }
 
@@ -296,8 +297,8 @@ func Test_descriptions(t *testing.T) {
 		p, err := setupParser()
 		require.NoError(t, err)
 
-		operation := &OperationObject{
-			Responses: map[string]*ResponseObject{},
+		operation := &openapi3.Operation{
+			Responses: openapi3.Responses{},
 		}
 
 		err = p.parseDescription(operation, "testing")
@@ -315,8 +316,8 @@ func Test_descriptions(t *testing.T) {
 		p, err := setupParser()
 		require.NoError(t, err)
 
-		operation := &OperationObject{
-			Responses: map[string]*ResponseObject{},
+		operation := &openapi3.Operation{
+			Responses: openapi3.Responses{},
 		}
 
 		err = p.parseDescription(operation, "$ref:https://example.com")
@@ -387,7 +388,7 @@ func Test_parseOperationTags(t *testing.T) {
 		p, err := setupParser()
 		require.NoError(t, err)
 
-		p.OpenAPI.Tags = append(p.OpenAPI.Tags, TagDefinition{Name: "foo", Description: &ReffableString{Value: "bar"}})
+		p.OpenAPI.Tags = append(p.OpenAPI.Tags, &openapi3.Tag{Name: "foo", Description: "bar"})
 
 		var comment []*ast.Comment
 		comment = append(comment, &ast.Comment{Slash: 0, Text: "// @Tag foo"})
@@ -399,7 +400,7 @@ func Test_parseOperationTags(t *testing.T) {
 		p, err := setupParser()
 		require.NoError(t, err)
 
-		p.OpenAPI.Tags = append(p.OpenAPI.Tags, TagDefinition{Name: "foo", Description: &ReffableString{Value: "bar"}})
+		p.OpenAPI.Tags = append(p.OpenAPI.Tags, &openapi3.Tag{Name: "foo", Description: "bar"})
 
 		var comment []*ast.Comment
 		comment = append(comment, &ast.Comment{Slash: 0, Text: "// @Tag Foo"})
