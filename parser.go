@@ -92,13 +92,17 @@ func newParser(modulePath, mainFilePath, handlerPath, descriptionRefPath string,
 		OmitPackages:            omitPackages,
 		ShowHidden:              showHidden,
 		FileRefPath:             descriptionRefPath,
-		OpenAPI:                 &openapi3.T{},
+		OpenAPI: &openapi3.T{
+			OpenAPI:  OpenAPIVersion,
+			Info:     &openapi3.Info{},
+			Paths:    make(openapi3.Paths),
+			Security: make(openapi3.SecurityRequirements, 0),
+			Components: openapi3.Components{
+				Schemas:         make(openapi3.Schemas),
+				SecuritySchemes: make(openapi3.SecuritySchemes),
+			},
+		},
 	}
-	p.OpenAPI.OpenAPI = OpenAPIVersion
-	p.OpenAPI.Paths = make(openapi3.Paths)
-	p.OpenAPI.Security = make(openapi3.SecurityRequirements, 0)
-	p.OpenAPI.Components.Schemas = make(openapi3.Schemas)
-	p.OpenAPI.Components.SecuritySchemes = make(openapi3.SecuritySchemes)
 
 	// check modulePath is exist
 	modulePath, _ = filepath.Abs(modulePath)
@@ -383,9 +387,6 @@ func (p *parser) parseEntryPoint() error {
 				value := strings.TrimSpace(comment[len(attribute):])
 				if len(value) == 0 {
 					continue
-				}
-				if p.OpenAPI.Info == nil {
-					p.OpenAPI.Info = &openapi3.Info{}
 				}
 
 				// p.debug(attribute, value)
