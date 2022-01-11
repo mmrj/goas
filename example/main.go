@@ -12,10 +12,10 @@ package main
 // @Security ApiKey read write
 // @SecurityScheme ApiKey apiKey header Authorization
 // @PackageAlias "example" ""
-// @Tags "Foo"
-// @Tags "Bar" "Baz"
-// @Tags "Vfoo"
-// @Tags "Foo With Spaces"
+// @Tags "Group A" "Foo"
+// @Tags "Group A" "Bar" "Baz"
+// @Tags "Group B" "Vfoo"
+// @Tags "Group B" "Foo With Spaces"
 
 func main() {
 

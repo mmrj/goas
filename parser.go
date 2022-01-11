@@ -364,7 +364,7 @@ func (p *parser) parseEntryPoint() error {
 	// Security Scopes are defined at a different level in the hierarchy as where they need to end up in the OpenAPI structure,
 	// so a temporary list is needed.
 	oauthScopes := make(map[string]map[string]string, 0)
-
+	tagGroups := make(map[string][]string)
 	if fileTree.Comments != nil {
 		for i := range fileTree.Comments {
 			for _, comment := range strings.Split(fileTree.Comments[i].Text(), "\n") {
@@ -487,7 +487,7 @@ func (p *parser) parseEntryPoint() error {
 
 					oauthScopes[fields[0]][fields[1]] = strings.Join(fields[2:], " ")
 				case "@tags":
-					t, err := parseTags(comment)
+					t, err := parseTags(comment, tagGroups)
 
 					if err != nil {
 						return err
@@ -513,6 +513,10 @@ func (p *parser) parseEntryPoint() error {
 				p.OpenAPI.Components.SecuritySchemes[scheme].OAuthFlows.ApplyScopes(scopes)
 			}
 		}
+	}
+
+	for tagGroup, tags := range tagGroups {
+		p.OpenAPI.TagGroup = append(p.OpenAPI.TagGroup, TagGroupDefinition{Name: tagGroup, Tags: tags, TraitTag: true})
 	}
 
 	if len(p.OpenAPI.Servers) < 1 {
@@ -544,15 +548,21 @@ func parsePackageAliases(comment string) (string, string, error) {
 	return matches[0][1], matches[1][1], nil
 }
 
-func parseTags(comment string) (*TagDefinition, error) {
+func parseTags(comment string, tagGroups map[string][]string) (*TagDefinition, error) {
 	re := regexp.MustCompile("\"([^\"]*)\"")
 	matches := re.FindAllStringSubmatch(comment, -1)
-	if len(matches) == 0 || len(matches[0]) == 1 {
-		return nil, fmt.Errorf("Expected: @Tags \"<name>\" [\"<description>\"] Received: %s", comment)
+	if len(matches) < 2 || len(matches[0]) == 1 {
+		return nil, fmt.Errorf("Expected: @Tags \"<group>\" \"<name>\" [\"<description>\"] Received: %s", comment)
 	}
-	tag := TagDefinition{Name: matches[0][1]}
-	if len(matches) > 1 {
-		tag.Description = &ReffableString{Value: matches[1][1]}
+	if len(tagGroups[matches[0][1]]) == 0 {
+		tagGroups[matches[0][1]] = []string{matches[1][1]}
+	} else {
+		tagGroups[matches[0][1]] = append(tagGroups[matches[0][1]], matches[1][1])
+	}
+
+	tag := TagDefinition{Name: matches[1][1]}
+	if len(matches) > 2 {
+		tag.Description = &ReffableString{Value: matches[2][1]}
 	}
 
 	return &tag, nil

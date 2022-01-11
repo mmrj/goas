@@ -25,7 +25,8 @@ type OpenAPIObject struct {
 	Components ComponentsOjbect      `json:"components,omitempty"` // Required for Authorization header
 	Security   []map[string][]string `json:"security,omitempty"`
 
-	Tags []TagDefinition `json:"tags,omitempty"`
+	Tags     []TagDefinition      `json:"tags,omitempty"`
+	TagGroup []TagGroupDefinition `json:"x-tagGroups,omitempty"`
 	// ExternalDocs
 }
 
@@ -296,4 +297,10 @@ type SecuritySchemeOauthFlowObject struct {
 type TagDefinition struct {
 	Name        string          `json:"name"`
 	Description *ReffableString `json:"description,omitempty"`
+}
+
+type TagGroupDefinition struct {
+	Name     string   `json:"name"`
+	Tags     []string `json:"tags"`
+	TraitTag bool     `json:"x-traitTag,omitempty"`
 }
