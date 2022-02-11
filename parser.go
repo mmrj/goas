@@ -38,8 +38,7 @@ type parser struct {
 	GoModCachePath string
 	GoRootSrcPath  string
 
-	OpenAPI        OpenAPIObject
-	PackageAliases map[string]string
+	OpenAPI OpenAPIObject
 
 	CorePkgs      map[string]bool
 	KnownPkgs     []pkg
@@ -224,8 +223,6 @@ func newParser(modulePath, mainFilePath, handlerPath, descriptionRefPath string,
 
 func (p *parser) parse() error {
 	// parse basic info
-	p.PackageAliases = make(map[string]string)
-
 	err := p.parseEntryPoint()
 	if err != nil {
 		return err
@@ -494,13 +491,6 @@ func (p *parser) parseEntryPoint() error {
 					}
 
 					p.OpenAPI.Tags = append(p.OpenAPI.Tags, *t)
-				case "@packagealias":
-					originalName, newName, err := parsePackageAliases(comment)
-
-					if err != nil {
-						return err
-					}
-					p.PackageAliases[originalName] = newName
 				}
 			}
 		}
@@ -532,16 +522,6 @@ func (p *parser) parseEntryPoint() error {
 	}
 
 	return nil
-}
-
-func parsePackageAliases(comment string) (string, string, error) {
-	re := regexp.MustCompile("\"([^\"]*)\"")
-	matches := re.FindAllStringSubmatch(comment, -1)
-	if len(matches) == 0 || len(matches[0]) == 1 {
-		return "", "", fmt.Errorf("Expected: @PackageAlias \"<name>\" \"<alias>\"] Received: %s", comment)
-	}
-
-	return matches[0][1], matches[1][1], nil
 }
 
 func parseTags(comment string) (*TagDefinition, error) {
@@ -1259,9 +1239,10 @@ func (p *parser) getSchemaObjectCached(pkgPath, pkgName, typeName string) (*Sche
 	var schemaObject *SchemaObject
 
 	// see if we've already parsed this type
-	cachedObj := p.checkCache(pkgName, typeName)
-	if cachedObj != nil {
-		return cachedObj, nil
+	if knownObj, ok := p.KnownIDSchema[p.genSchemaObjectID(pkgName, typeName)]; ok {
+		schemaObject = knownObj
+	} else if knownObj, ok := p.KnownIDSchema[typeName]; ok {
+		schemaObject = knownObj
 	} else {
 		// if not, parse it now
 		parsedObject, err := p.parseSchemaObject(pkgPath, pkgName, typeName, true)
@@ -1864,48 +1845,15 @@ func (p *parser) debugf(format string, args ...interface{}) {
 	}
 }
 
-// checkCache loops over possible aliased package names for a type to see if it's already in cache and returns that if found.
-func (p *parser) checkCache(pkgName, typeName string) *SchemaObject {
-	currentName := p.genSchemaObjectID(pkgName, typeName)
-	if knownObj, ok := p.KnownIDSchema[currentName]; ok {
-		return knownObj
-	} else if knownObj, ok := p.KnownIDSchema[typeName]; ok {
-		return knownObj
-	}
-
-	for _, v := range p.PackageAliases {
-		splitName := strings.Split(currentName, ".")
-		if len(splitName) == 1 {
-			newName := v + splitName[0]
-			if foundObject, ok := p.KnownIDSchema[newName]; ok {
-				return foundObject
-			}
-		} else if len(splitName) == 2 {
-			newName := v + splitName[1]
-			if foundObject, ok := p.KnownIDSchema[newName]; ok {
-				return foundObject
-			}
-		}
-
-		typeNameParts := strings.Split(typeName, ".")
-		typeAlias := v + "." + typeNameParts[len(typeNameParts)-1]
-		if foundObject, ok := p.KnownIDSchema[typeAlias]; ok {
-			return foundObject
-		}
-
-	}
-	return nil
-}
-
 func (p *parser) genSchemaObjectID(pkgName, typeName string) string {
 	apiSchemaName, ok := p.ApiSchemaNames[pkgName][typeName]
 	if ok {
 		return apiSchemaName
 	}
-	aliasedPkgName := getAliasedPackageName(pkgName, p.PackageAliases)
-	aliasedTypeName := getAliasedTypeName(typeName, p.PackageAliases)
-	typeNameParts := strings.Split(aliasedTypeName, ".")
-	pkgNameParts := strings.Split(aliasedPkgName, "/")
+
+	typeNameParts := strings.Split(typeName, ".")
+	pkgName = replaceBackslash(pkgName)
+	pkgNameParts := strings.Split(pkgName, "/")
 	if p.OmitPackages || pkgNameParts[len(pkgNameParts)-1] == "" {
 		return typeNameParts[len(typeNameParts)-1]
 	} else {

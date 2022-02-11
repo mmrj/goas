@@ -11,7 +11,6 @@ package main
 // @Server https://app.launchdarkly.com
 // @Security ApiKey read write
 // @SecurityScheme ApiKey apiKey header Authorization
-// @PackageAlias "example" ""
 // @Tags "Foo"
 // @Tags "Bar" "Baz"
 // @Tags "Vfoo"
