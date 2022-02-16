@@ -12,7 +12,7 @@ import (
 )
 
 func setupParser() (*parser, error) {
-	return newParser("example/", "example/main.go", "", "", false, false, false)
+	return newParser("example/", "example/main.go", "", "", false, true, false)
 }
 func TestExample(t *testing.T) {
 	p, err := setupParser()
@@ -29,7 +29,7 @@ func TestExample(t *testing.T) {
 }
 
 func TestShowHiddenExample(t *testing.T) {
-	p, err := newParser("example/", "example/main.go", "", "", false, false, true)
+	p, err := newParser("example/", "example/main.go", "", "", false, true, true)
 	require.NoError(t, err)
 
 	err = p.parse()
@@ -362,7 +362,7 @@ func Test_genSchemaObjectID(t *testing.T) {
 
 		result := p.genSchemaObjectID("sample", "sample")
 
-		require.Equal(t, "sample.sample", string(result))
+		require.Equal(t, "sample", string(result))
 	})
 	t.Run("multidepth package name", func(t *testing.T) {
 		p, err := setupParser()
@@ -370,7 +370,7 @@ func Test_genSchemaObjectID(t *testing.T) {
 
 		result := p.genSchemaObjectID("test.sample", "sample")
 
-		require.Equal(t, "test.sample.sample", string(result))
+		require.Equal(t, "sample", string(result))
 	})
 	t.Run("omit package name", func(t *testing.T) {
 		p, err := newParser("example/", "example/main.go", "", "", false, true, false)
