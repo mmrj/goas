@@ -467,7 +467,10 @@
         "type": "object",
         "additionalProperties": {}
       },
-      "InterfaceResponse": {},
+      "InterfaceResponse": {
+        "type": "object",
+        "additionalProperties": {}
+      },
       "JsonMap": {
         "type": "object",
         "additionalProperties": {}

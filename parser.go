@@ -1539,7 +1539,8 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 		}
 	} else if _, ok := typeSpec.Type.(*ast.InterfaceType); ok {
 		// free form object since the interface can be "anything"
-		schemaObject.Type = nil
+		schemaObject.Type = &objectType
+		schemaObject.AdditionalProperties = &SchemaObject{}
 	}
 
 	// we don't want to register 3rd party library types
