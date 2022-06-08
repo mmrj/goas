@@ -299,14 +299,21 @@
           }
         }
       },
+      "AnimalAlias": {
+        "$ref": "#/components/schemas/Animal"
+      },
       "Birb": {
         "type": "object",
         "required": [
-          "name"
+          "name",
+          "animalAlias"
         ],
         "properties": {
           "name": {
             "type": "string"
+          },
+          "animalAlias": {
+            "$ref": "#/components/schemas/Animal"
           },
           "airspeedVelocity": {
             "type": "number"

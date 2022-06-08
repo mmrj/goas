@@ -1648,22 +1648,27 @@ func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObje
 			refSchema, ok := p.KnownIDSchema[fieldSchema.ID]
 			if ok {
 				if refSchema.Properties == nil {
-					p.debug("nil refSchema.Properties")
-					return
-				}
-				for _, propertyName := range refSchema.Properties.Keys() {
-					refPropertySchema, _ := refSchema.Properties.Get(propertyName)
-					_, disabled := structSchema.DisabledFieldNames[refPropertySchema.(*SchemaObject).FieldName]
-					if disabled {
+					newName, skip := parseStructTags(astField, structSchema, refSchema, "")
+					if skip {
 						return
 					}
-					_, exist := structSchema.Properties.Get(propertyName)
-					if exist {
-						return
+
+					structSchema.Properties.Set(newName, refSchema)
+				} else {
+					for _, propertyName := range refSchema.Properties.Keys() {
+						refPropertySchema, _ := refSchema.Properties.Get(propertyName)
+						_, disabled := structSchema.DisabledFieldNames[refPropertySchema.(*SchemaObject).FieldName]
+						if disabled {
+							return
+						}
+						_, exist := structSchema.Properties.Get(propertyName)
+						if exist {
+							return
+						}
+						structSchema.Properties.Set(propertyName, refPropertySchema)
 					}
-					structSchema.Properties.Set(propertyName, refPropertySchema)
+					structSchema.Required = append(structSchema.Required, refSchema.Required...)
 				}
-				structSchema.Required = append(structSchema.Required, refSchema.Required...)
 			}
 		}
 	} else {

@@ -61,8 +61,11 @@ type FooMergePatch struct {
 // @ApiSchemaName Birb
 type Bird struct {
 	Animal
+	AnimalAlias      `json:"animalAlias" required:"true"`
 	AirspeedVelocity float32 `json:"airspeedVelocity"`
 }
+
+type AnimalAlias Animal
 
 // TODO since Animal is not used directly and probably shouldn't be included in the output spec
 type Animal struct {
