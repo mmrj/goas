@@ -87,22 +87,28 @@ func Test_infoDescriptionRef(t *testing.T) {
 }
 
 func Test_parseTags(t *testing.T) {
-	t.Run("name", func(t *testing.T) {
-		result, err := parseTags("@Tags \"Foo\"")
+	t.Run("name and missing description", func(t *testing.T) {
+		tagGroups := make(map[string][]string)
+		tagKeys := make([]string, 0, len(tagGroups))
+		_, err := parseTags("@Tags \"Group\" \"Foo\"", tagGroups, &tagKeys)
 
-		require.NoError(t, err)
-		require.Equal(t, &TagDefinition{Name: "Foo"}, result)
+		require.Error(t, err)
 	})
 
 	t.Run("name and description", func(t *testing.T) {
-		result, err := parseTags("@Tags \"Foobar\" \"Barbaz\"")
+		tagGroups := make(map[string][]string)
+		tagKeys := make([]string, 0, len(tagGroups))
+		result, err := parseTags("@Tags \"Group\" \"Foobar\" \"Barbaz\"", tagGroups, &tagKeys)
 
 		require.NoError(t, err)
 		require.Equal(t, &TagDefinition{Name: "Foobar", Description: &ReffableString{Value: "Barbaz"}}, result)
 	})
 
 	t.Run("name and description including ref ", func(t *testing.T) {
-		result, err := parseTags("@Tags \"Foobar\" \"$ref:path/to/baz\"")
+		tagGroups := make(map[string][]string)
+		tagKeys := make([]string, 0, len(tagGroups))
+		result, err := parseTags("@Tags \"Group\" \"Foobar\" \"$ref:path/to/baz\"", tagGroups, &tagKeys)
+
 		require.NoError(t, err)
 		b, err := json.Marshal(result)
 		require.NoError(t, err)
@@ -110,7 +116,9 @@ func Test_parseTags(t *testing.T) {
 	})
 
 	t.Run("invalid tag", func(t *testing.T) {
-		_, err := parseTags("@Tags Foobar Barbaz")
+		tagGroups := make(map[string][]string)
+		tagKeys := make([]string, 0, len(tagGroups))
+		_, err := parseTags("@Tags Foobar Barbaz", tagGroups, &tagKeys)
 
 		require.Error(t, err)
 	})

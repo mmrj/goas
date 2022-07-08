@@ -358,10 +358,11 @@ func (p *parser) parseEntryPoint() error {
 		return fmt.Errorf("can not parse general API information: %v", err)
 	}
 
-	// Security Scopes are defined at a different level in the hierarchy as where they need to end up in the OpenAPI structure,
+	// Security scopes and tag groups are defined at a different level in the hierarchy as where they need to end up in the OpenAPI structure,
 	// so a temporary list is needed.
 	oauthScopes := make(map[string]map[string]string, 0)
-
+	tagGroups := make(map[string][]string)
+	tagGroupKeys := make([]string, 0, len(tagGroups))
 	if fileTree.Comments != nil {
 		for i := range fileTree.Comments {
 			for _, comment := range strings.Split(fileTree.Comments[i].Text(), "\n") {
@@ -484,7 +485,7 @@ func (p *parser) parseEntryPoint() error {
 
 					oauthScopes[fields[0]][fields[1]] = strings.Join(fields[2:], " ")
 				case "@tags":
-					t, err := parseTags(comment)
+					t, err := parseTags(comment, tagGroups, &tagGroupKeys)
 
 					if err != nil {
 						return err
@@ -503,6 +504,10 @@ func (p *parser) parseEntryPoint() error {
 				p.OpenAPI.Components.SecuritySchemes[scheme].OAuthFlows.ApplyScopes(scopes)
 			}
 		}
+	}
+
+	for i := range tagGroupKeys {
+		p.OpenAPI.TagGroup = append(p.OpenAPI.TagGroup, TagGroupDefinition{Name: tagGroupKeys[i], Tags: tagGroups[tagGroupKeys[i]], TraitTag: true})
 	}
 
 	if len(p.OpenAPI.Servers) < 1 {
@@ -524,15 +529,23 @@ func (p *parser) parseEntryPoint() error {
 	return nil
 }
 
-func parseTags(comment string) (*TagDefinition, error) {
+func parseTags(comment string, tagGroups map[string][]string, tagGroupKeys *[]string) (*TagDefinition, error) {
 	re := regexp.MustCompile("\"([^\"]*)\"")
 	matches := re.FindAllStringSubmatch(comment, -1)
-	if len(matches) == 0 || len(matches[0]) == 1 {
-		return nil, fmt.Errorf("Expected: @Tags \"<name>\" [\"<description>\"] Received: %s", comment)
+	if len(matches) != 3 || len(matches[0]) == 1 {
+		return nil, fmt.Errorf("Expected: @Tags \"<group>\" \"<name>\" [\"<description>\"] Received: %s", comment)
 	}
-	tag := TagDefinition{Name: matches[0][1]}
+
+	if len(tagGroups[matches[0][1]]) == 0 {
+		tagGroups[matches[0][1]] = []string{matches[1][1]}
+		*tagGroupKeys = append(*tagGroupKeys, matches[0][1])
+	} else {
+		tagGroups[matches[0][1]] = append(tagGroups[matches[0][1]], matches[1][1])
+	}
+
+	tag := TagDefinition{Name: matches[1][1]}
 	if len(matches) > 1 {
-		tag.Description = &ReffableString{Value: matches[1][1]}
+		tag.Description = &ReffableString{Value: matches[2][1]}
 	}
 
 	return &tag, nil

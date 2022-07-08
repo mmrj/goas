@@ -11,10 +11,10 @@ package main
 // @Server https://app.launchdarkly.com
 // @Security ApiKey read write
 // @SecurityScheme ApiKey apiKey header Authorization
-// @Tags "Foo"
-// @Tags "Bar" "Baz"
-// @Tags "Vfoo"
-// @Tags "Foo With Spaces"
+// @Tags "Group 1" "Foo" "description"
+// @Tags "Group 1" "Bar" "Baz"
+// @Tags "Group 2" "Vfoo" "another description"
+// @Tags "Group 2" "Foo With Spaces" "some other description"
 
 func main() {
 

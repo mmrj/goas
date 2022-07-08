@@ -480,17 +480,38 @@
   ],
   "tags": [
     {
-      "name": "Foo"
+      "name": "Foo",
+      "description": "description"
     },
     {
       "name": "Bar",
       "description": "Baz"
     },
     {
-      "name": "Vfoo"
+      "name": "Vfoo",
+      "description": "another description"
     },
     {
-      "name": "Foo With Spaces"
+      "name": "Foo With Spaces",
+      "description": "some other description"
+    }
+  ],
+  "x-tagGroups": [
+    {
+      "name": "Group 1",
+      "tags": [
+        "Foo",
+        "Bar"
+      ],
+      "x-traitTag": true
+    },
+    {
+      "name": "Group 2",
+      "tags": [
+        "Vfoo",
+        "Foo With Spaces"
+      ],
+      "x-traitTag": true
     }
   ]
 }
