@@ -536,6 +536,9 @@ func parseTags(comment string, tagGroups map[string][]string, tagGroupKeys *[]st
 		return nil, fmt.Errorf("Expected: @Tags \"<group>\" \"<name>\" [\"<description>\"] Received: %s", comment)
 	}
 
+	// If the tag group exists already (in [0][1] spot) append the tag to the list of tags
+	// associated with the tag group, if it doesn't exist, create an entry in the map for the
+	// tag group and tag
 	if len(tagGroups[matches[0][1]]) == 0 {
 		tagGroups[matches[0][1]] = []string{matches[1][1]}
 		*tagGroupKeys = append(*tagGroupKeys, matches[0][1])
