@@ -539,7 +539,7 @@ func parseTags(comment string, tagGroups map[string][]string, tagGroupKeys *[]st
 	re := regexp.MustCompile("\"([^\"]*)\"")
 	matches := re.FindAllStringSubmatch(comment, -1)
 	if len(matches) != 3 || len(matches[0]) == 1 {
-		return nil, fmt.Errorf("Expected: @Tags \"<group>\" \"<name>\" [\"<description>\"] Received: %s", comment)
+		return nil, fmt.Errorf("Expected: @Tags \"<group>\" \"<name>\" \"<description>\" Received: %s", comment)
 	}
 
 	if len(tagGroups[matches[0][1]]) == 0 {
