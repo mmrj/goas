@@ -529,6 +529,12 @@ func (p *parser) parseEntryPoint() error {
 	return nil
 }
 
+// Tags are annotated as '@Tags "tag group" "tag name" "tag description". If the annotation
+// is not in this format or has the wrong number of parameters, we throw an error.
+//
+// If the tag group exists already append the tag to the list of tags
+// associated with the tag group, if it doesn't exist, create an entry in the map for the
+// tag group and tag
 func parseTags(comment string, tagGroups map[string][]string, tagGroupKeys *[]string) (*TagDefinition, error) {
 	re := regexp.MustCompile("\"([^\"]*)\"")
 	matches := re.FindAllStringSubmatch(comment, -1)
@@ -536,9 +542,6 @@ func parseTags(comment string, tagGroups map[string][]string, tagGroupKeys *[]st
 		return nil, fmt.Errorf("Expected: @Tags \"<group>\" \"<name>\" [\"<description>\"] Received: %s", comment)
 	}
 
-	// If the tag group exists already (in [0][1] spot) append the tag to the list of tags
-	// associated with the tag group, if it doesn't exist, create an entry in the map for the
-	// tag group and tag
 	if len(tagGroups[matches[0][1]]) == 0 {
 		tagGroups[matches[0][1]] = []string{matches[1][1]}
 		*tagGroupKeys = append(*tagGroupKeys, matches[0][1])
