@@ -398,6 +398,10 @@
             "type": "string",
             "format": "date-time"
           },
+          "uniqueId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "endDate": {
             "$ref": "#/components/schemas/UnixMillis"
           },

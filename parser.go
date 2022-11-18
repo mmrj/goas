@@ -1371,6 +1371,10 @@ func (p *parser) parseSchemaObject(pkgPath, pkgName, typeName string, register b
 		schemaObject.Type = &stringType
 		schemaObject.Format = "date-time"
 		return &schemaObject, nil
+	} else if typeName == "uuid.UUID" {
+		schemaObject.Type = &stringType
+		schemaObject.Format = "uuid"
+		return &schemaObject, nil
 	} else if strings.HasPrefix(typeName, "interface{}") {
 		schemaObject.Type = nil
 		return &schemaObject, nil
@@ -1595,7 +1599,7 @@ func (p *parser) parseAstField(pkgPath, pkgName string, structSchema *SchemaObje
 
 	isSliceOrMap := strings.HasPrefix(typeAsString, "[]") || strings.HasPrefix(typeAsString, "map[]")
 	isInterface := strings.HasPrefix(typeAsString, "interface{}")
-	if isSliceOrMap || isInterface || typeAsString == "time.Time" {
+	if isSliceOrMap || isInterface || typeAsString == "time.Time" || typeAsString == "uuid.UUID" {
 		splitType := strings.Split(typeAsString, "]")
 		if len(splitType) > 1 && !isBasicGoType(splitType[1]) {
 			if _, ok := p.KnownIDSchema[splitType[1]]; ok {
