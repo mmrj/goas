@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/google/uuid"
 	"time"
 
 	"gopkg.in/mgo.v2/bson"
@@ -19,6 +20,7 @@ type FooResponse struct {
 	BsonID        BsonID                 `json:"bsonId"`
 	ID            string                 `json:"id"`
 	StartDate     time.Time              `json:"startDate"`
+	UniqueId      uuid.UUID              `json:"uniqueId"`
 	EndDate       UnixMillis             `json:"endDate"`
 	Count         int64                  `json:"count" example:"6"`
 	Msg           json.RawMessage        `json:"msg"`
