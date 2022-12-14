@@ -173,6 +173,7 @@ type SchemaObject struct {
 	Example              interface{}            `json:"example,omitempty"`
 	Deprecated           bool                   `json:"deprecated,omitempty"`
 	Enum                 []string               `json:"enum,omitempty"`
+	Default              string                 `json:"default,omitempty"`
 
 	// Ref is used when SchemaObject is as a ReferenceObject
 	Ref string `json:"$ref,omitempty"`

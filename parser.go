@@ -941,8 +941,9 @@ func (p *parser) parseDescription(operation *OperationObject, description string
 }
 
 func (p *parser) parseParamComment(pkgPath, pkgName string, operation *OperationObject, comment string) error {
-	// {name}  {in}  {goType}  {required}  {description}  		{example (optional)}
+	// {name}  {in}  {goType}  {required}  {description}  		{example (optional)}  {default value (optional)}
 	// user    body  User      true        "Info of a user."	"{\"name\":\"Bilbo\"}"
+	// key     query string    false       "Filters results by key."  ""  "projKey"
 	// f       file  ignored   true        "Upload a file."
 	re := regexp.MustCompile(`([-\w]+)[\s]+([\w]+)[\s]+([\w./\[\]\\(\\),]+)[\s]+([\w]+)[\s]+"([^"]+)"(?:[\s]+"((?:[^"\\]|\\")*)")?`)
 	matches := re.FindStringSubmatch(comment)
@@ -961,6 +962,12 @@ func (p *parser) parseParamComment(pkgPath, pkgName string, operation *Operation
 		required = true
 	}
 	description := matches[5]
+
+  // parse default value
+	defaultVal := ""
+	if len(matches) == 7 && required != true {
+		defaultVal = matches[6]
+	}
 
 	// `file`, `form`
 	if in == "file" || in == "files" || in == "form" {
@@ -1027,6 +1034,7 @@ func (p *parser) parseParamComment(pkgPath, pkgName string, operation *Operation
 				Type:        &localGoType,
 				Format:      goTypesOASFormats[goType],
 				Description: description,
+				Default:     defaultVal,
 			}
 			operation.Parameters = append(operation.Parameters, parameterObject)
 		}

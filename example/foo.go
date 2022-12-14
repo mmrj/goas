@@ -132,6 +132,20 @@ var getVarFoo = func() {
 
 }
 
+// @Title Get foo with query param
+// @Tag Foo
+// @Description Get foos with query
+// @OperationId getFooWithQuery
+// @Route /api/v2/foo/search [get]
+// @Param bazKey query string false "If provided, filters foos to those with the provided bazKey" "defaultBazKey"
+// @Success 200 object FooResponse "Successful foo response"
+// @Failure 401 "Invalid access token"
+// @Failure 403 "Forbidden"
+// @Failure 404 "Invalid resource identifier"
+func getFooWithQuery() {
+
+}
+
 // @Title Get foos with spaces
 // @Tag Foo With Spaces
 // @Description Get foos with spaces
